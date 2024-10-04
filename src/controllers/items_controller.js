@@ -5,18 +5,20 @@ const myCache = new NodeCache({ stdTTL: 100, checkperiod: 120 });
 
 const createItem = async (req, res) => {
   try {
+    console.log("create item");
     const newItemData = req.body;
 
-    const existingItem = Items.findOne({companyCode: companyCode,codeNo:codeNo});
+    const existingItem =await Items.findOne({companyCode: companyCode,codeNo:codeNo});
 
     if (existingItem) {
+      console.log("already exist");
       return res.status(400).json({
         success: false,
         message: `Item with codeNo ${codeNo} already exists for companyCode ${companyCode}`,
       });
     }
+    console.log("does not  exist");
 
-    // Handle image data if present
     if (newItemData.images && newItemData.images.length > 0) {
       newItemData.images = newItemData.images.map((image) => ({
         data: Buffer.from(image.data, "base64"),
