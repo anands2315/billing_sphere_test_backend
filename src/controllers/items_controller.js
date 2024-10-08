@@ -7,6 +7,8 @@ const createItem = async (req, res) => {
   try {
     console.log("create item");
     const newItemData = req.body;
+    console.log(newItemData);
+
 
     const existingItem =await Items.findOne({companyCode: companyCode,codeNo:codeNo});
 
@@ -28,6 +30,7 @@ const createItem = async (req, res) => {
     }
 
     const newItem = await Items.create(newItemData);
+    console.log(newItem);
     res.json({ success: true, data: newItem });
   } catch (ex) {
     res.json({ success: false, message: ex });
