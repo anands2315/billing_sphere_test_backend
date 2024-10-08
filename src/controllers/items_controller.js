@@ -20,10 +20,10 @@ const createItem = async (req, res) => {
     //   });
     // }
 
-    return res.status(400).json({
-      success: false,
-      message: `Item with codeNo ${codeNo} already exists for companyCode ${companyCode}`,
-    });
+    // return res.status(400).json({
+    //   success: false,
+    //   message: `Item with codeNo ${codeNo} already exists for companyCode ${companyCode}`,
+    // });
     console.log("does not  exist");
 
     if (newItemData.images && newItemData.images.length > 0) {
