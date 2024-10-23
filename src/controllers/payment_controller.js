@@ -37,6 +37,7 @@ const PaymentController = {
 
   updatePayment: async (req, res) => {
     try {
+      console.log(req.body);
       const updatedPayment = await Payment.findByIdAndUpdate(
         req.params.id,
         req.body,
@@ -57,11 +58,12 @@ const PaymentController = {
       if (!deletedPayment) {
         return res.status(404).json({ error: "Payment not found" });
       }
-      res.status(200).json({ message: "Payment deleted successfully" });
+      res.status(200).json({ success: true, message: "Payment deleted successfully" });
     } catch (error) {
       res.status(400).json({ error: error.message });
     }
   },
+  
 };
 
 module.exports = PaymentController;

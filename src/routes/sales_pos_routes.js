@@ -4,6 +4,7 @@ const router = express.Router();
 
 router.post('/create', SalesPosController.createSalesPos);
 router.get('/all/:code', SalesPosController.getAllSalesPos);
+router.get('/byID/:companyCode/:id', SalesPosController.getSalesPosById);
 router.put('/update/:id', SalesPosController.updateSalesPos);
 router.delete('/delete/:id', SalesPosController.deleteSalesPos);
 

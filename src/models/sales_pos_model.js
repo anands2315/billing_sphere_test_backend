@@ -79,7 +79,7 @@ const SalesPosSchema = new mongoose.Schema({
   },
   ac: {
     type: String,
-    required: true,
+    // required: true,
   },
   noc: {
     type: String,
@@ -88,15 +88,15 @@ const SalesPosSchema = new mongoose.Schema({
   customer: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "NewCustomer",
-    required: true,
+    // required: true,
   },
   billedTo: {
     type: String,
-    required: true,
+    // required: true,
   },
   remarks: {
     type: String,
-    required: true,
+    // required: true,
   },
   type: {
     type: String,
@@ -123,6 +123,15 @@ const SalesPosSchema = new mongoose.Schema({
     type: Number,
     required: true,
   },
+  multimode: [
+    {
+      cash: { type: Number, required: false },
+      debit: { type: Number, required: false },
+      adjustedamount: { type: Number, required: false },
+      pending: { type: Number, required: false },
+      finalamount: { type: Number, required: false },
+    }
+  ],
   createdAt: {
     type: String,
     required: false,

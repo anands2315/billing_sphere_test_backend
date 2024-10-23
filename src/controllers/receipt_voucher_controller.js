@@ -55,15 +55,16 @@ const ReceiptVoucherController = {
 
     deleteReceiptVoucher: async (req, res) => {
         try {
-            const deletedreceiptvoucher = await ReceiptVoucher.findByIdAndDelete(req.params.id);
-            if (!deletedreceiptvoucher) {
-                return res.status(404).json({ error: "ReceiptVoucher not found" });
-            }
-            res.status(200).json({ message: "ReceiptVoucher deleted successfully" });
+          const deletedReceiptVoucher = await ReceiptVoucher.findByIdAndDelete(req.params.id);
+          if (!deletedReceiptVoucher) {
+            return res.status(404).json({ success: false, message: "ReceiptVoucher not found" });
+          }
+          res.status(200).json({ success: true, message: "ReceiptVoucher deleted successfully" });
         } catch (error) {
-            res.status(400).json({ error: error.message });
+          res.status(400).json({ success: false, message: error.message });
         }
-    },
+      },
+      
 }
 
 
