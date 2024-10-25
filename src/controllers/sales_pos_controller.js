@@ -44,12 +44,12 @@ const createSalesPos = async (req, res) => {
       const salesQty = entry.qty;
       const newQty = itemQty - salesQty;
 
-      if (newQty < 0) {
-        return res.status(400).json({
-          success: false,
-          message: `Not enough stock for item ${item.name}. Available: ${itemQty}, required: ${salesQty}`,
-        });
-      }
+      // if (newQty < 0) {
+      //   return res.status(400).json({
+      //     success: false,
+      //     message: `Not enough stock for item ${item.name}. Available: ${itemQty}, required: ${salesQty}`,
+      //   });
+      // }
 
       await Items.findByIdAndUpdate(entry.itemName, {
         maximumStock: newQty,

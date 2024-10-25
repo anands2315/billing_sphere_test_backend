@@ -4,8 +4,8 @@ const PaymentController = {
   createPayment: async (req, res) => {
     try {
       const paymentData = req.body;
-      const payment = new Payment(paymentData); // Create a new instance of Payment
-      await payment.save(); // Save the payment instance to the database
+      const payment = new Payment(paymentData); 
+      await payment.save(); 
       return res.status(201).json({ success: true, message: 'Payment saved successfully' });
     } catch (ex) {
       return res.status(500).json({ success: false, message: ex.message });

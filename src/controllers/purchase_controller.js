@@ -1,8 +1,7 @@
 const PurchaseModel = require("../models/purchase_model");
 const Items = require("../models/items_model");
 const Ledger = require("../models/ledger_model");
-const { get } = require("mongoose");
-
+ 
 const PurchaseController = {
   // For creating purchase entry
   createPurchase: async function (req, res) {
