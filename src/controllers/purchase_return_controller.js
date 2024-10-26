@@ -25,7 +25,7 @@ const PurchaseReturnController = {
             if (!ledger) {
                 throw new Error("Ledger not found.");
             }
-            ledger.debitBalance += purchaseReturnData.totalAmount;
+            ledger.debitBalance -= purchaseReturnData.totalAmount;
             await ledger.save({ session }); 
         }
 
@@ -56,7 +56,7 @@ const PurchaseReturnController = {
 
             await Items.updateOne(
                 { _id: productId },
-                { $inc: { maximumStock: quantity }, price: sellingPrice },
+                { $inc: { maximumStock: -quantity }, price: sellingPrice },
                 { session }
             );
         }
