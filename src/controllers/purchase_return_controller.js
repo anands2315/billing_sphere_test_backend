@@ -1,4 +1,5 @@
 const PurchaseReturnModel = require("../models/purchase_return_model");
+const mongoose = require("mongoose");
 const Items = require("../models/items_model");
 const Ledger = require("../models/ledger_model");
 
@@ -10,6 +11,7 @@ const PurchaseReturnController = {
 
     try {
         const purchaseReturnData = req.body;
+        console.log(purchaseReturnData);
         purchaseReturnData.totalAmount = parseFloat(purchaseReturnData.totalAmount);
         purchaseReturnData.cashAmount = parseFloat(purchaseReturnData.cashAmount);
         
