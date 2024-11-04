@@ -10,4 +10,10 @@ PurchaseReturnRoutes.get("/get-all",verifyToken,PurchaseReturnController.getAllP
 
 PurchaseReturnRoutes.get("/fetch-all/:companyCode",verifyToken,PurchaseReturnController.fetchAllPurchaseReturn);
 
+PurchaseReturnRoutes.get("/fetch-by-id/:companyCode/:id",verifyToken,PurchaseReturnController.fetchPurchaseReturnById);
+
+PurchaseReturnRoutes.put("/update-by-id/:id",verifyToken,PurchaseReturnController.updatePurchaseReturn);
+
+PurchaseReturnRoutes.delete("/delete-by-id/:id",verifyToken,PurchaseReturnController.deletePurchaseReturn);
+
 module.exports = PurchaseReturnRoutes;
