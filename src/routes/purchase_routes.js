@@ -12,22 +12,31 @@ PurchaseRoutes.get(
 PurchaseRoutes.get("/get-all", verifyToken, PurchaseController.getAllpurchase);
 
 PurchaseRoutes.post("/create", verifyToken, PurchaseController.createPurchase);
+
 PurchaseRoutes.get(
   "/get/:id",
   verifyToken,
   PurchaseController.fetchPurchseById
 );
+
 PurchaseRoutes.get(
   "/getByBillNumber/:billNumber",
   // verifyToken,
   PurchaseController.fetchPurchaseByBillNumber
 );
+
+PurchaseRoutes.get(
+  "/getByLedger/:ledger",
+  // verifyToken,
+  PurchaseController.fetchPurchaseByLedger
+);
+
 PurchaseRoutes.delete(
   "/delete/:id",
   // verifyToken,
   PurchaseController.deletePurchaseById
 );
-// updating purchase entry
+
 PurchaseRoutes.put(
   "/update/:id",
   verifyToken,

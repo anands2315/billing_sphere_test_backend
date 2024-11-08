@@ -3,7 +3,6 @@ const mongoose = require("mongoose");
 const Items = require("../models/items_model");
 const Ledger = require("../models/ledger_model");
 const Purchase = require("../models/purchase_model");
-const PurchseReturnModel = require("../models/purchase_return_model");
 
 const PurchaseReturnController = {
 
@@ -24,7 +23,7 @@ const PurchaseReturnController = {
                 const ledger = await Ledger.findById(ledgerID).session(session);
                 if (!ledger) throw new Error("Ledger not found.");
 
-                ledger.debitBalance -= purchaseReturnData.totalAmount;
+                ledger.debitBalance += purchaseReturnData.totalAmount;
                 await ledger.save({ session });
             }
 
@@ -109,6 +108,21 @@ const PurchaseReturnController = {
         }
     },
 
+    fetchPurchaseReturnByLedger: async function (req, res) {
+        try {
+            const { ledger } = req.params;
+            const ledgerId = new mongoose.Types.ObjectId(ledger);
+            const purchaseReturn = await PurchaseReturnModel.find({ ledger: ledgerId });
+            if (!purchaseReturn) {
+                return res.json({ success: false, message: "Purchase Return entry not found." });
+              }
+            return res.json({ success: true, data: purchaseReturn });
+        } catch (ex) {
+            return res.json({ success: false, message: ex });
+
+        }
+    },
+
     updatePurchaseReturn: async function (req, res) {
         const session = await mongoose.startSession();
         session.startTransaction();
@@ -116,7 +130,6 @@ const PurchaseReturnController = {
         try {
             const { id } = req.params;
             const updatedData = req.body;
-            console.log(updatedData);
 
             const existingPurchaseReturn = await PurchaseReturnModel.findById(id).session(session);
             if (!existingPurchaseReturn) throw new Error("Purchase return not found.");
@@ -127,10 +140,7 @@ const PurchaseReturnController = {
             if (purchaseType === "Debit") {
                 const ledger = await Ledger.findById(ledgerID).session(session);
                 if (!ledger) throw new Error("Ledger not found.");
-                console.log(existingPurchaseReturn.totalAmount);
-                console.log(`before update ledger debit balance : ${ledger.debitBalance}`);
-                ledger.debitBalance += parseFloat(existingPurchaseReturn.totalAmount);
-                console.log(`updated ledger debit balance : ${ledger.debitBalance}`);
+                ledger.debitBalance -= parseFloat(existingPurchaseReturn.totalAmount);
                 await ledger.save({ session });
             }
 
@@ -150,7 +160,11 @@ const PurchaseReturnController = {
                 const purchaseId = bill.purchase;
                 const purchase = await Purchase.findById(purchaseId).session(session);
                 if (!purchase) throw new Error("Purchase not found.");
-                purchase.dueAmount += bill.amount;
+
+                const billAmount = parseFloat(bill.amount);
+                const dueAmountBeforeUpdate = parseFloat(purchase.dueAmount) || 0;
+
+                purchase.dueAmount = dueAmountBeforeUpdate + billAmount;
                 await purchase.save({ session });
             }
 
@@ -160,10 +174,8 @@ const PurchaseReturnController = {
             if (updatedData.type === "Debit") {
                 const ledger = await Ledger.findById(updatedData.ledger).session(session);
                 if (!ledger) throw new Error("Ledger not found.");
-                console.log(updatedData.totalAmount);
-                console.log(ledger.debitBalance);
-                ledger.debitBalance -= updatedData.totalAmount;
-                console.log(ledger.debitBalance);
+
+                ledger.debitBalance += updatedData.totalAmount;
                 await ledger.save({ session });
             }
 
@@ -227,7 +239,7 @@ const PurchaseReturnController = {
                 const ledger = await Ledger.findById(ledgerID).session(session);
                 if (!ledger) throw new Error("Ledger not found.");
 
-                ledger.debitBalance += parseFloat(existingPurchaseReturn.totalAmount);
+                ledger.debitBalance -= parseFloat(existingPurchaseReturn.totalAmount);
 
                 await ledger.save({ session });
             }
@@ -249,7 +261,10 @@ const PurchaseReturnController = {
                 const purchase = await Purchase.findById(purchaseId).session(session);
                 if (!purchase) throw new Error("Purchase not found.");
 
-                purchase.dueAmount += bill.amount;
+                const billAmount = parseFloat(bill.amount);
+                const dueAmountBeforeUpdate = parseFloat(purchase.dueAmount) || 0;
+
+                purchase.dueAmount = dueAmountBeforeUpdate + billAmount;
                 await purchase.save({ session });
             }
 

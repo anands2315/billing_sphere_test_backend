@@ -12,6 +12,8 @@ PurchaseReturnRoutes.get("/fetch-all/:companyCode",verifyToken,PurchaseReturnCon
 
 PurchaseReturnRoutes.get("/fetch-by-id/:companyCode/:id",verifyToken,PurchaseReturnController.fetchPurchaseReturnById);
 
+PurchaseReturnRoutes.get("/fetch-by-ledger/:companyCode/:ledger",verifyToken,PurchaseReturnController.fetchPurchaseReturnByLedger);
+
 PurchaseReturnRoutes.put("/update-by-id/:id",verifyToken,PurchaseReturnController.updatePurchaseReturn);
 
 PurchaseReturnRoutes.delete("/delete-by-id/:id",verifyToken,PurchaseReturnController.deletePurchaseReturn);

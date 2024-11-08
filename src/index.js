@@ -36,10 +36,9 @@ mongoose
     // "mongodb://13.60.61.193:27017/BillingSphere2"
     // "mongodb+srv://johngospel003:LlJ6bdJ35zCzc53O@cluster0.efot3tr.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
     // "mongodb+srv://billingspherefuerte:VhjtujqeZDbYvn6o@billingsphere.sg7iac6.mongodb.net/billingSphere?retryWrites=true&w=majority"
-    // "mongodb+srv://billingspherefuerte:ezMcxwF01Wk2Gv2C@cluster0.e4gsqkd.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
-    // "mongodb+srv://billingspherefuerte:ezMcxwF01Wk2Gv2C@cluster0.e4gsqkd.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
-    // "mongodb+srv://billingspherefuerte:ezMcxwF01Wk2Gv2C@cluster0.e4gsqkd.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
     "mongodb+srv://billingspherefuerte:ezMcxwF01Wk2Gv2C@cluster0.e4gsqkd.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
+    // "mongodb+srv://anandsinghfuerte:anandsingh2315@cluster0.maywh.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
+    // "mongodb+srv://anandsinghfuerte:anandsingh2315@cluster0.maywh.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
     // "mongodb+srv://anandsinghfuerte:anandsingh2315@cluster0.maywh.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
     // "mongodb://fdsupermartbd:fuerteretail1313@35.154.157.177:27017/?authSource=test"
   )
@@ -110,6 +109,10 @@ app.use("/api/product-stock", ProductStockRoutes);
 //Routes for sales
 const SalesRoutes = require("./routes/sales_entry_routes");
 app.use("/api/sales", SalesRoutes);
+
+//Routes for sales return
+const SalesReturnRoutes = require("./routes/sales_return_routes");
+app.use("/api/sales-return",SalesReturnRoutes);
 
 //Routes for items
 const ItemRoutes = require("./routes/items_routes");
