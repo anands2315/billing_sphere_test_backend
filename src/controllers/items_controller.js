@@ -109,6 +109,75 @@ const getItemById = async (req, res) => {
   }
 };
 
+const searchItemsByName = async (req, res) => {
+  try {
+    const companyCode = req.params.companyCode;
+    const searchQuery = req.query.query || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+
+    // Perform the search with regex for case-insensitive matching and paginate results
+    const items = await Items.find({
+      itemName: { $regex: searchQuery, $options: "i" },
+      companyCode: companyCode, // Filter by companyCode
+    })
+      .skip((page - 1) * limit)
+      .limit(limit);
+
+    // Get the total number of matching items (for pagination info)
+    // const totalItems = await Items.countDocuments({
+    //   itemName: { $regex: searchQuery, $options: "i" },
+    //   companyCode: companyCode,
+    // });
+
+    res.status(200).json({
+      success: true,
+      // totalItems: totalItems,
+      totalItems: items.length,
+      currentPage: page,
+
+      // totalPages: Math.ceil(totalItems / limit),
+      data: items,
+    });
+  } catch (error) {
+    console.error("Error fetching items:", error);
+    res.status(500).json({ success: false, message: "Failed to fetch items" });
+  }
+};
+
+const getMultipleItemById = async (req, res) => {
+  try {
+    // Get itemIds from query parameters and split by comma if necessary
+    const companyCode = req.params.companyCode;
+    const itemIds = req.query.itemIds ? req.query.itemIds.split(",") : [];
+
+    // Validate the itemIds to be ObjectIds
+    if (itemIds.length === 0) {
+      return res.json({ success: false, message: "No item IDs provided" });
+    }
+
+    // Check if each itemId is a valid ObjectId
+    const invalidIds = itemIds.filter(id => !mongoose.Types.ObjectId.isValid(id));
+    if (invalidIds.length > 0) {
+      return res.json({ success: false, message: `Invalid item IDs: ${invalidIds.join(", ")}` });
+    }
+
+    // Fetch all items whose IDs are in the itemIds array
+    const items = await Items.find({
+      _id: { $in: itemIds.map(id => new mongoose.Types.ObjectId(id)) },  // No need for 'new' if using Types.ObjectId directly
+      companyCode: companyCode,
+    });
+
+    if (items.length > 0) {
+      res.json({ success: true, data: items });
+    } else {
+      res.json({ success: false, message: "No items found" });
+    }
+  } catch (ex) {
+    res.json({ success: false, message: ex.message || "Error fetching items" });
+  }
+};
+
 // const updateItem = async (req, res) => {
 //   try {
 
@@ -489,6 +558,8 @@ module.exports = {
   getItemsByGroup,
   updateItem,
   deleteItem,
+  searchItemsByName,
+  getMultipleItemById,
   getItemByBarCode,
   insertItemsIntoDB,
   updateAllItems,

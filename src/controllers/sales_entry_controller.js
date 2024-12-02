@@ -266,6 +266,7 @@ const getAllSales = async (req, res) => {
     return res.json({ success: false, message: ex });
   }
 };
+
 const fetchAllSales = async (req, res) => {
   try {
     const { companyCode } = req.params;
@@ -277,6 +278,49 @@ const fetchAllSales = async (req, res) => {
     return res.json({ success: false, message: ex });
   }
 };
+
+const fetchSalesByBillNumber = async (req, res) => {
+  try {
+    const dcNo = req.params.billNumber;
+
+    const fetchSalesByBillNumber = await SalesEntry.findOne({
+       dcNo: dcNo
+    });
+
+    if (!fetchSalesByBillNumber) {
+      return res.json({
+        success: false,
+        message: "Sales entry not found",
+      });
+    }
+
+    return res.json({success: true,data: fetchSalesByBillNumber});
+  } catch (ex) {
+    res.json({ success: false, message: ex });
+  }
+}
+
+const fetchSalesByParty = async (req, res) => {
+  try {
+    const party = req.params.party;
+
+    const salesEntries = await SalesEntry.find({ party: party });
+
+    if (salesEntries.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "No sales entries found for the specified party",
+      });
+    }
+
+    return res.status(200).json({ success: true, data: salesEntries });
+  } catch (ex) {
+    console.error("Error fetching sales entries:", ex);
+    return res.status(500).json({ success: false, message: ex.message });
+  }
+};
+
+
 //pagination
 const getSales = async (req, res) => {
   try {
@@ -419,6 +463,8 @@ module.exports = {
   updateSales,
   deleteSales,
   getAllSales,
+  fetchSalesByBillNumber,
+  fetchSalesByParty,
   getSingleSales,
   downloadReceipt,
   fetchAllSales,

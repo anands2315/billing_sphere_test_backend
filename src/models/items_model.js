@@ -169,17 +169,34 @@ const ItemsSchema = new mongoose.Schema({
 });
 
 ItemsSchema.pre("save", async function (next) {
+  if (this.$locals?.skipBarcodeCreation) {
+    return next();
+  }
   try {
-    this.updateOn = new Date();
-    this.createdOn = new Date();
-    const barcodeDoc = await Barcode.create({ barcode: this.barcode });
+    this.updatedAt = new Date();
+    if (!this.createdAt) {
+      this.createdAt = new Date();
+    }
+
+    let barcodeDoc = await Barcode.findOne({ barcode: this.barcode });
+
+    if (!barcodeDoc) {
+      // Create a new barcode if it doesn't exist
+      barcodeDoc = await Barcode.create({ barcode: this.barcode });
+      console.log("New Barcode Created: ", barcodeDoc._id);
+    } else {
+      console.log("Existing Barcode Found: ", barcodeDoc._id);
+    }
+
+    // Update the `barcode` field with the barcode document ID
     this.barcode = barcodeDoc._id;
-    console.log("Barcode: ", barcodeDoc._id);
+
     next();
   } catch (error) {
-    console.log("Error: ", error);
+    console.error("Error in pre-save hook: ", error);
     next(error);
   }
 });
+
 
 module.exports = mongoose.model("Items", ItemsSchema);

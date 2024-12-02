@@ -15,6 +15,7 @@ router.post(
 
 // Get all items
 router.get("/get-items/:companyCode", ItemsController.getItems);
+router.get("/get-items/search/:companyCode", ItemsController.searchItemsByName);
 router.get("/get-items", ItemsController.fetchAllItems);
 
 // Get a specific item by ID
@@ -22,6 +23,12 @@ router.get("/get-item/:itemId", verifyToken, ItemsController.getItemById);
 
 // Get a items by Category
 router.get("/get-items-by-group/:category", ItemsController.getItemsByGroup);
+
+router.get(
+  "/get-item-multiple/:companyCode",
+  verifyToken,
+  ItemsController.getMultipleItemById
+);
 
 // Get brands by category
 router.get(
