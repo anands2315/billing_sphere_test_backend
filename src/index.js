@@ -18,9 +18,6 @@ app.use(cors());
 app.use(morgan("dev"));
 require("dotenv").config();
 
-app.get("/", (req, res) => {
-  res.send("Hello World");
-});
 
 // const cred = {
 //   key,
@@ -37,12 +34,9 @@ mongoose
     // "mongodb+srv://johngospel003:LlJ6bdJ35zCzc53O@cluster0.efot3tr.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
     // "mongodb+srv://billingspherefuerte:VhjtujqeZDbYvn6o@billingsphere.sg7iac6.mongodb.net/billingSphere?retryWrites=true&w=majority"
     // "mongodb+srv://billingspherefuerte:ezMcxwF01Wk2Gv2C@cluster0.e4gsqkd.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
-    // "mongodb+srv://anandsinghfuerte:anandsingh2315@cluster0.maywh.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
+    "mongodb+srv://anandsinghfuerte:anandsingh2315@cluster0.maywh.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
     // "mongodb://fdsupermartbd:fuerteretail1313@35.154.157.177:27017/?authSource=test"
     // "mongodb+srv://anandsinghfuerte:anand2315@cluster0.b2kwc.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
-    // "mongodb+srv://anandsinghfuerte:anand2315@cluster0.b2kwc.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
-    // "mongodb+srv://anandsinghfuerte:anand2315@cluster0.b2kwc.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
-    "mongodb+srv://anandsinghfuerte:anand2315@cluster0.b2kwc.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
   )
   .then(() => {
     console.log("Connected to database");
@@ -52,6 +46,57 @@ mongoose
 app.get('/', (res, req) => {
   res.send("Hello World")
 });
+
+const Items = require("./models/items_model");
+
+// Find duplicate barcodes function
+const findDuplicateBarcodes = async () => {
+  try {
+    const duplicates = await Items.aggregate([
+      {
+        $group: {
+          _id: {
+            barcode: "$barcode",
+            companyCode: "$companyCode",
+          },
+          count: { $sum: 1 },
+          items: { $push: "$_id" }, // Optional: to track item IDs
+        },
+      },
+      {
+        $match: {
+          count: { $gt: 1 }, // Filter groups with more than 1 item
+        },
+      },
+      {
+        $project: {
+          _id: 0, // Exclude MongoDB's default _id field
+          barcode: "$_id.barcode",
+          companyCode: "$_id.companyCode",
+          count: 1,
+          items: 1, // Include list of item IDs with the same barcode
+        },
+      },
+    ]);
+
+    return duplicates;
+  } catch (error) {
+    console.error("Error finding duplicate barcodes:", error);
+    throw error;
+  }
+};
+
+// Expose the findDuplicateBarcodes function as an API endpoint
+app.get("/api/items/duplicates", async (req, res) => {
+  try {
+    const duplicates = await findDuplicateBarcodes();
+    res.status(200).json({ success: true, data: duplicates });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Error finding duplicates", error });
+  }
+});
+
+
 
 //Routes for creating User
 const UserRoutes = require("./routes/user_routes");

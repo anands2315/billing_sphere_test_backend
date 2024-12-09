@@ -62,6 +62,21 @@ const DeliveryChallanSchema = new mongoose.Schema({
         type: String,
         required: [true, "Please provide a unit for this sales entry."],
       },
+      tax: {
+        type: String,
+      },
+      sgst: {
+        type: Number,
+      },
+      cgst: {
+        type: Number,
+      },
+      discount: {
+        type: Number,
+      },
+      igst: {
+        type: Number,
+      },
       netAmount: {
         type: Number,
         required: [true, "Please provide a net amount for this sales entry."],

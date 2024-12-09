@@ -178,6 +178,109 @@ const getMultipleItemById = async (req, res) => {
   }
 };
 
+const getUniqueFieldIds = async (req, res) => {
+  try {
+    // Fetch unique IDs for each field
+    const itemGroups = await Items.distinct("itemGroup");
+    const itemBrands = await Items.distinct("itemBrand");
+    const taxCategories = await Items.distinct("taxCategory");
+    const hsns = await Items.distinct("hsnCode");
+
+    res.status(200).json({
+      success: true,
+      data: {
+        itemGroups,
+        itemBrands,
+        taxCategories,
+        hsns,
+      },
+    });
+  } catch (error) {
+    console.error("Error fetching unique field IDs:", error);
+    res.status(500).json({
+      success: false,
+      message: "An error occurred while fetching data.",
+      error: error.message,
+    });
+  }
+};
+
+const groupedItems = async (req, res) => {
+  try {
+    const { groupBy, companyCode, page = 1, limit = 20, search = "" } = req.query;
+    console.log(".........");
+    console.log(groupBy);
+    console.log(companyCode);
+    console.log(search);
+
+    const validGroupFields = ["itemGroup", "itemBrand", "taxCategory", "hsnCode"];
+    if (!groupBy || !validGroupFields.includes(groupBy)) {
+      return res.status(400).json({
+        success: false,
+        message: `Invalid or missing groupBy parameter. Allowed values are: ${validGroupFields.join(", ")}`,
+      });
+    }
+
+    const filter = companyCode ? { companyCode: companyCode } : {};
+
+    if (search) {
+      const regex = new RegExp(search, "i"); 
+      filter.$or = [
+        { itemName: { $regex: regex } }, 
+      ];
+    }
+
+    // Fetch the items with the filter
+    const items = await Items.find(filter);
+
+    if (items.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: `No items found for companyCode: ${companyCode}`,
+      });
+    }
+
+    // Group the items by the selected field (groupBy)
+    const grouped = items.reduce((result, item) => {
+      const key = item[groupBy];
+      if (!result[key]) {
+        result[key] = [];
+      }
+      result[key].push(item);
+      return result;
+    }, {});
+
+    // Flatten the grouped items into a list
+    const groupedItems = Object.values(grouped).flat();
+
+    const totalItems = groupedItems.length;
+    const totalPages = Math.ceil(totalItems / limit);
+    const skip = (page - 1) * limit;
+
+    const paginatedItems = groupedItems.slice(skip, skip + limit);
+
+    res.status(200).json({
+      success: true,
+      data: paginatedItems,
+      pagination: {
+        currentPage: page,
+        totalPages: totalPages,
+        totalItems: totalItems,
+        limit: limit,
+      },
+    });
+  } catch (error) {
+    console.error("Error fetching grouped items:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error fetching grouped items",
+    });
+  }
+};
+
+
+
+
 // const updateItem = async (req, res) => {
 //   try {
 
@@ -560,6 +663,8 @@ module.exports = {
   deleteItem,
   searchItemsByName,
   getMultipleItemById,
+  getUniqueFieldIds,
+  groupedItems,
   getItemByBarCode,
   insertItemsIntoDB,
   updateAllItems,

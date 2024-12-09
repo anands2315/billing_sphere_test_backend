@@ -36,6 +36,11 @@ router.get(
   ItemsController.getBrandsByGroup
 );
 
+// Get all IDs
+router.get("/unique-ids", ItemsController.getUniqueFieldIds);
+
+router.get("/group", ItemsController.groupedItems);
+
 // Update a specific item by ID
 router.put(
   "/update-item/:itemId",

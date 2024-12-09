@@ -34,6 +34,7 @@ const createSales = async (req, res) => {
       ledger.debitBalance += salesData.totalamount;
       await ledger.save();
     }
+    
     // if (ledger.openingBalance < salesData.totalamount) {
     //   const remainingAmount =
     //     salesData.totalamount - ledger.openingBalance;
@@ -105,93 +106,63 @@ const createSales = async (req, res) => {
 };
 
 // For updating Sales
-// For updating Sales
 const updateSales = async (req, res) => {
   try {
     const salesData = req.body;
+    console.log(salesData);
     const currentSalesId = salesData.id;
 
-    // Fetch current sales entry and ledger
     const currentSales = await SalesEntry.findById(currentSalesId);
     const currentSalesLedger = await Ledger.findById(salesData.party);
 
     if (!currentSales || !currentSalesLedger) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Sales entry or ledger not found." });
+      return res.status(404).json({
+        success: false,
+        message: "Sales entry or ledger not found.",
+      });
     }
 
-    const {
-      type: currentSalesTypeBeforeEdit,
-      totalamount: totalAmountBeforeEdit,
-      entries: currentEntriesBeforeUpdate,
-    } = currentSales;
-
-    const {
-      type: currentSalesTypeAfterEdit,
-      totalamount: totalAmountAfterEdit,
-      entries: newEntries,
-      cashAmount,
-      dueAmount,
-    } = salesData;
-
-    const parsedTotalAmountBeforeEdit = parseFloat(totalAmountBeforeEdit);
-    const parsedTotalAmountAfterEdit = parseFloat(totalAmountAfterEdit);
-    const parsedCashAmount = parseFloat(cashAmount);
-    const parsedDueAmount = parseFloat(dueAmount);
-
-    // Update ledger balances based on sales type changes
-    if (currentSalesTypeBeforeEdit === "DEBIT") {
-      currentSalesLedger.debitBalance -= parsedTotalAmountBeforeEdit;
-    } else if (currentSalesTypeBeforeEdit === "CASH") {
-      currentSalesLedger.cashBalance -= parsedTotalAmountBeforeEdit;
-    } else if (currentSalesTypeBeforeEdit === "MULTI MODE") {
-      currentSalesLedger.cashBalance -= parsedTotalAmountBeforeEdit;
+    if (currentSales.type === "DEBIT") {
+      currentSalesLedger.debitBalance -= currentSales.totalamount;
+    } else if (currentSales.type === "CASH") {
+      currentSalesLedger.cashBalance -= currentSales.totalamount;
+    } else if (currentSales.type === "MULTI MODE") {
+      currentSalesLedger.debitBalance -= currentSales.totalamount;
     }
 
-    if (currentSalesTypeAfterEdit === "DEBIT") {
-      currentSalesLedger.debitBalance += parsedTotalAmountAfterEdit;
-    } else if (currentSalesTypeAfterEdit === "CASH") {
-      currentSalesLedger.cashBalance += parsedTotalAmountAfterEdit;
-    }
-
-    // Update stock quantities for removed items
-    for (const entry of currentEntriesBeforeUpdate) {
+    for (const entry of currentSales.entries) {
       const { itemName, qty } = entry;
       await Items.updateOne({ _id: itemName }, { $inc: { maximumStock: qty } });
     }
 
-    // Update stock quantities for new items
-    for (const entry of newEntries) {
-      const { itemName, qty } = entry;
-      await Items.updateOne(
-        { _id: itemName },
-        { $inc: { maximumStock: -qty } }
-      );
+    const newTotalAmount = parseFloat(salesData.totalamount || 0);
+    if (salesData.type === "DEBIT") {
+      currentSalesLedger.debitBalance += newTotalAmount;
+    } else if (salesData.type === "CASH") {
+      currentSalesLedger.cashBalance += newTotalAmount;
     }
 
-    // Update sales entry with new data from req.body
-    currentSales.type = currentSalesTypeAfterEdit;
-    currentSales.totalamount = parsedTotalAmountAfterEdit;
-    currentSales.cashAmount = parsedCashAmount;
-    currentSales.dueAmount = parsedDueAmount;
-    currentSales.entries = newEntries;
+    for (const entry of salesData.entries) {
+      const { itemName, qty } = entry;
+      await Items.updateOne({ _id: itemName }, { $inc: { maximumStock: -qty } });
+    }
 
-    // Save the updated sales entry
+    Object.assign(currentSales, salesData);
+
     await currentSales.save();
-
-    // Save the updated ledger
     await currentSalesLedger.save();
 
     return res.json({ success: true, data: currentSales });
-  } catch (ex) {
-    console.error(ex); // Log error details for debugging
+  } catch (error) {
+    console.error(error);
     return res.status(500).json({
       success: false,
       message: "An error occurred while updating sales.",
     });
   }
 };
+
+
 
 const deleteSales = async (req, res) => {
   try {
