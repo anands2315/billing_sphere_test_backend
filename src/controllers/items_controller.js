@@ -1,6 +1,7 @@
 const Items = require("../models/items_model");
 const BarcodePrint = require("../models/barcode_print_model");
 const NodeCache = require("node-cache");
+const mongoose = require('mongoose');
 const myCache = new NodeCache({ stdTTL: 100, checkperiod: 120 });
 
 const createItem = async (req, res) => {
@@ -49,7 +50,8 @@ const fetchAllItems = async (req, res) => {
   }
 };
 
-const getItems = async (req, res) => {
+const getItems = async (req, res) => { 
+  ` `
   try {
     let page = parseInt(req.query.page) || 1;
     let limit = req.query.limit ? parseInt(req.query.limit) : 2000;

@@ -23,9 +23,6 @@ const createSales = async (req, res) => {
       const ledger = await Ledger.findById(ledgerID);
       ledger.debitBalance += salesData.multimode[0].debit;
 
-      // console.log(ledger.debitBalance);
-      // console.log(typeof ledger.debitBalance);
-      // console.log(salesData.multimode[0].debit);
       await ledger.save();
     }
 
@@ -34,40 +31,10 @@ const createSales = async (req, res) => {
       ledger.debitBalance += salesData.totalamount;
       await ledger.save();
     }
-    
-    // if (ledger.openingBalance < salesData.totalamount) {
-    //   const remainingAmount =
-    //     salesData.totalamount - ledger.openingBalance;
-    //   salesData.dueAmount = remainingAmount;
-    //   ledger.openingBalance = 0;
-    //   newsalesData.dueAmount = salesData.dueAmount;
-    // } else if (ledger.openingBalance >= salesData.totalamount) {
-    //   ledger.openingBalance -= salesData.totalamount;
-    // }
 
     if (saleType === "CASH") {
       newsalesData.cashAmount = salesData.totalamount;
     }
-    // if (salesData.cashAmount < salesData.totalamount) {
-    //   salesData.dueAmount =
-    //     salesData.totalamount - salesData.cashAmount;
-
-    //   newsalesData.dueAmount = salesData.dueAmount;
-    // } else {
-    //   salesData.dueAmount = 0;
-    //   newsalesData.dueAmount = salesData.dueAmount;
-    // }
-
-    // const existingSales = await SalesEntry.findOne({
-    //   $or: [{ dcNo: req.body.dcNo }],
-    // });
-
-    // if (existingSales) {
-    //   return res.json({
-    //     success: false,
-    //     message: "Bill No already exists.",
-    //   });
-    // }
 
     await newsalesData.save();
 
@@ -84,9 +51,6 @@ const createSales = async (req, res) => {
         });
       }
 
-      // Update maximum stock
-      // sales.maximumStock -= quantity;
-      // await sales.save();
       await Items.updateOne(
         { _id: salesId },
         { $inc: { maximumStock: -quantity } }
@@ -105,15 +69,13 @@ const createSales = async (req, res) => {
   }
 };
 
-// For updating Sales
 const updateSales = async (req, res) => {
   try {
     const salesData = req.body;
-    console.log(salesData);
     const currentSalesId = salesData.id;
 
     const currentSales = await SalesEntry.findById(currentSalesId);
-    const currentSalesLedger = await Ledger.findById(salesData.party);
+    const currentSalesLedger = await Ledger.findById(currentSales.party);
 
     if (!currentSales || !currentSalesLedger) {
       return res.status(404).json({
@@ -127,7 +89,7 @@ const updateSales = async (req, res) => {
     } else if (currentSales.type === "CASH") {
       currentSalesLedger.cashBalance -= currentSales.totalamount;
     } else if (currentSales.type === "MULTI MODE") {
-      currentSalesLedger.debitBalance -= currentSales.totalamount;
+      currentSalesLedger.debitBalance -= currentSales.multimode[0].debit;
     }
 
     for (const entry of currentSales.entries) {
@@ -140,6 +102,8 @@ const updateSales = async (req, res) => {
       currentSalesLedger.debitBalance += newTotalAmount;
     } else if (salesData.type === "CASH") {
       currentSalesLedger.cashBalance += newTotalAmount;
+    } else if (salesData.type === "MULTI MODE") {
+      currentSalesLedger.debitBalance += salesData.multimode[0].debit;
     }
 
     for (const entry of salesData.entries) {
@@ -148,7 +112,6 @@ const updateSales = async (req, res) => {
     }
 
     Object.assign(currentSales, salesData);
-
     await currentSales.save();
     await currentSalesLedger.save();
 
@@ -163,55 +126,67 @@ const updateSales = async (req, res) => {
 };
 
 
-
 const deleteSales = async (req, res) => {
   try {
     const id = req.params.id;
-    const getSales = await SalesEntry.findOne({ _id: id });
+
+    const getSales = await SalesEntry.findById(id);
+    if (!getSales) {
+      return res.status(404).json({ success: false, message: "Sales not found." });
+    }
+
     const ledgerID = getSales.party;
     const salesType = getSales.type;
-
     const salesTotalAmount = parseFloat(getSales.totalamount);
-    const salesDueAmount = parseFloat(getSales.dueAmount);
 
     for (const entry of getSales.entries) {
-      const salesId = entry.itemName;
-      const quantity = entry.qty;
-      const sales = await Items.findById(salesId);
-      // sales.maximumStock += quantity;
-      // await sales.save();
-
-      if (!sales) {
-        return res.json({
+      const { itemName, qty } = entry;
+      const item = await Items.findById(itemName);
+      if (!item) {
+        return res.status(404).json({
           success: false,
-          message: "sales not found.",
+          message: `Item with ID ${itemName} not found.`,
         });
       }
-      await Items.updateOne(
-        { _id: salesId },
-        { $inc: { maximumStock: quantity } }
-      );
+      await Items.updateOne({ _id: itemName }, { $inc: { maximumStock: qty } });
+    }
+
+    const ledger = await Ledger.findById(ledgerID);
+    if (!ledger) {
+      return res.status(404).json({
+        success: false,
+        message: `Ledger with ID ${ledgerID} not found.`,
+      });
     }
 
     if (salesType === "DEBIT") {
-      const ledger = await Ledger.findById(ledgerID);
-      if (salesTotalAmount > 0) {
-        const op = ledger.debitBalance - salesTotalAmount;
-        ledger.debitBalance = op;
-      }
-
-      await ledger.save();
+      ledger.debitBalance -= salesTotalAmount;
+    } else if (salesType === "CASH") {
+      ledger.cashBalance -= salesTotalAmount;
+    } else if (salesType === "MULTI MODE") {
+      ledger.debitBalance -= getSales.multimode[0].debit; 
     }
-    const getSalesAndDelete = await SalesEntry.findByIdAndDelete(id);
 
-    if (!getSalesAndDelete) {
-      return res.json({ success: false, message: "Sales not found" });
+    await ledger.save();
+
+    const deletedSales = await SalesEntry.findByIdAndDelete(id);
+    if (!deletedSales) {
+      return res.status(404).json({ success: false, message: "Sales deletion failed." });
     }
-    return res.json({ success: true, message: "Deleted Successfully!" });
+
+    return res.json({ success: true, message: "Sales deleted successfully!" });
   } catch (ex) {
-    return res.json({ success: false, message: ex });
+    console.error(ex);
+    return res.status(500).json({
+      success: false,
+      message: "An error occurred while deleting the sales entry.",
+      error: ex.message,
+    });
   }
 };
+
+
+
 //For Deleting Sales
 // const deleteSales = async (req, res) => {
 //   try {
