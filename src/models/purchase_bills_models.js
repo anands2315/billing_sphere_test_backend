@@ -1,28 +1,30 @@
 const mongoose = require('mongoose');
 
 const PurchaseBillSchema = new mongoose.Schema({
+    date: { type: String, required: true },
     companyCode: {
         type: String,
         required: true,
     },
     name: {
         type: String,
-        required:true,
+        required: true,
     },
     type: {
         type: String,
         required: true,
     },
-    ref: {
-        
+    ledger: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Ledger",
+        required: true,
     },
+    ref: { type: mongoose.Schema.Types.ObjectId, required: true },
     totalAmount: {
         type: String
     },
-    cashAmount: { type: String },
     dueAmount: { type: String },
-    roundoffDiff: { type: Number, default: "0.00" },
 });
 
-const PurchaseBillModel = mongoose.model("purchaseBill",PurchaseBillSchema);
+const PurchaseBillModel = mongoose.model("purchaseBill", PurchaseBillSchema);
 module.exports = PurchaseBillModel;

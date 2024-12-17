@@ -103,12 +103,16 @@ const SalesReturnSchema = new mongoose.Schema({
                 type: String,
                 required: true,
             },
-            sales: {
+            salesBill: {
                 type: mongoose.Schema.Types.ObjectId,
-                ref: "SalesEntry",
+                ref: "salesBill",
+                required: false,
+            },
+            billType: {
+                type: String,
                 required: true,
             },
-            billNo: {
+            billName: {
                 type: String,
                 required: false,
             },
@@ -131,6 +135,8 @@ const SalesReturnSchema = new mongoose.Schema({
         },
       ],
 });
+
+SalesReturnSchema.path('billwise').required(false);
 
 const SalesReturnModel = mongoose.model("SalesReturn",SalesReturnSchema);
 

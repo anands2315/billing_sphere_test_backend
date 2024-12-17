@@ -43,7 +43,7 @@ const PurchseReturnSchema = new mongoose.Schema({
             itemName: {
                 type: mongoose.Schema.Types.ObjectId,
                 ref: "Items",
-                required: [true, "Please provide a item name for this sales entry."],
+                required: [true, "Please provide an item name for this sales entry."],
             },
             qty: {
                 type: Number,
@@ -59,7 +59,7 @@ const PurchseReturnSchema = new mongoose.Schema({
             },
             amount: {
                 type: Number,
-                required: [true, "Please provide a amount for this sales entry."],
+                required: [true, "Please provide an amount for this sales entry."],
             },
             tax: {
                 type: String,
@@ -67,7 +67,7 @@ const PurchseReturnSchema = new mongoose.Schema({
             },
             sgst: {
                 type: Number,
-                required: [true, "Please provide a sgst for this sales entry."],
+                required: [true, "Please provide an sgst for this sales entry."],
             },
             cgst: {
                 type: Number,
@@ -75,11 +75,11 @@ const PurchseReturnSchema = new mongoose.Schema({
             },
             discount: {
                 type: Number,
-                required: [true, "Please provide a cgst for this sales entry."],
+                required: [true, "Please provide a discount for this sales entry."],
             },
             igst: {
                 type: Number,
-                required: [true, "Please provide a igst for this sales entry."],
+                required: [true, "Please provide an igst for this sales entry."],
             },
             netAmount: {
                 type: Number,
@@ -94,41 +94,48 @@ const PurchseReturnSchema = new mongoose.Schema({
             },
         },
     ],
+   
     billwise: [
         {
             date: {
                 type: String,
                 required: true,
             },
-            purchase: {
+            purchaseBill: {
                 type: mongoose.Schema.Types.ObjectId,
-                ref: "Purchase",
+                ref: "PurchaseBill",
+                required: false,
+            },
+            billType: {
+                type: String,
                 required: true,
             },
-            billNo: {
+            billName: {
                 type: String,
                 required: false,
             },
             amount: {
                 type: Number,
-                required: false,
+                required: true,
             },
         },
     ],
     sundry: [
         {
-          sundryName: {
-            type: String,
-            required: [true, "Please provide a ledger for this sales entry."],
-          },
-          amount: {
-            type: Number,
-            required: [true, "Please provide a amount for this sales entry."],
-          },
+            sundryName: {
+                type: String,
+                required: [true, "Please provide a ledger for this sales entry."],
+            },
+            amount: {
+                type: Number,
+                required: [true, "Please provide an amount for this sales entry."],
+            },
         },
-      ],
+    ],
 });
 
-const PurchseReturnModel = mongoose.model("PurchaseReturns",PurchseReturnSchema);
+PurchseReturnSchema.path('billwise').required(false);
+
+const PurchseReturnModel = mongoose.model("PurchaseReturns", PurchseReturnSchema);
 
 module.exports = PurchseReturnModel;

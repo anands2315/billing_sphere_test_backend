@@ -149,6 +149,10 @@ app.use("/api/purchase", PurchaseRoutes);
 const PurchaseReturnRoutes = require("./routes/purchase_return_routes");
 app.use("/api/purchase-return",PurchaseReturnRoutes);
 
+//Routes for purchase bills
+const PurchaseBillRoutes = require("./routes/purchase_bills_routes");
+app.use("/api/purchase-bills",PurchaseBillRoutes);
+
 //Routes for Product Stock
 const ProductStockRoutes = require("./routes/product_stock_routes");
 app.use("/api/product-stock", ProductStockRoutes);
@@ -160,6 +164,10 @@ app.use("/api/sales", SalesRoutes);
 //Routes for sales return
 const SalesReturnRoutes = require("./routes/sales_return_routes");
 app.use("/api/sales-return",SalesReturnRoutes);
+
+//Routes for sales bill
+const SalesBillRoutes = require("./routes/sales_bill_routes");
+app.use("/api/sales-bill",SalesBillRoutes);
 
 //Routes for items
 const ItemRoutes = require("./routes/items_routes");

@@ -1,6 +1,7 @@
 const SalesEntry = require("../models/sales_entry_model");
 const Items = require("../models/items_model");
 const Ledger = require("../models/ledger_model");
+const SalesBillModel = require("../models/sales_bills_model");
 const fs = require("fs");
 const pdfdocument = require("pdfkit");
 const pdfTable = require("voilab-pdf-table");
@@ -9,20 +10,20 @@ const pdfTable = require("voilab-pdf-table");
 const createSales = async (req, res) => {
   try {
     const salesData = req.body;
+
     salesData.totalamount = parseFloat(salesData.totalamount);
     salesData.cashAmount = parseFloat(salesData.cashAmount);
     salesData.dueAmount = parseFloat(salesData.dueAmount);
-    const newsalesData = SalesEntry(salesData);
 
+    const newsalesData = new SalesEntry(salesData);
     const ledgerID = salesData.party;
     const saleType = salesData.type;
-    let ledger = null;
+
     console.log(salesData);
 
     if (saleType === "MULTI MODE") {
       const ledger = await Ledger.findById(ledgerID);
       ledger.debitBalance += salesData.multimode[0].debit;
-
       await ledger.save();
     }
 
@@ -47,7 +48,7 @@ const createSales = async (req, res) => {
       if (!sales) {
         return res.json({
           success: false,
-          message: "sales not found.",
+          message: "Item not found.",
         });
       }
 
@@ -57,8 +58,28 @@ const createSales = async (req, res) => {
       );
     }
 
-    // const sales = await SalesEntry.create(req.body);
-    // console.log(sales);
+    if (saleType === "MULTI MODE" || saleType === "DEBIT") {
+      const dueAmount =
+        saleType === "MULTI MODE"
+          ? salesData.multimode[0]?.debit || 0
+          : salesData.totalamount;
+
+      const salesBillData = {
+        date: salesData.date,
+        companyCode: salesData.companyCode,
+        name: `BS# ${salesData.no}`,
+        type: "BS",
+        ledger: ledgerID,
+        ref: newsalesData._id, 
+        totalAmount: salesData.totalamount.toString(),
+        dueAmount: dueAmount.toString(),
+      };
+
+      const salesBill = new SalesBillModel(salesBillData);
+      await salesBill.save();
+    }
+
+    // Response to the client
     return res.json({
       success: true,
       message: "Sales Created",
@@ -68,6 +89,7 @@ const createSales = async (req, res) => {
     return res.json({ success: false, message: ex.message });
   }
 };
+
 
 const updateSales = async (req, res) => {
   try {

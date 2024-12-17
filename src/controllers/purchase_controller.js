@@ -2,73 +2,91 @@ const PurchaseModel = require("../models/purchase_model");
 const mongoose = require("mongoose");
 const Items = require("../models/items_model");
 const Ledger = require("../models/ledger_model");
+const PurchaseBillModel = require("../models/purchase_bills_models");
+
 
 const PurchaseController = {
-  // For creating purchase entry
+
   createPurchase: async function (req, res) {
     try {
       const purchaseData = req.body;
       purchaseData.totalamount = parseFloat(purchaseData.totalamount);
       purchaseData.cashAmount = parseFloat(purchaseData.cashAmount);
       purchaseData.dueAmount = parseFloat(purchaseData.dueAmount);
-      const newPurchaseData = PurchaseModel(purchaseData);
-
-      // Extract Data
+      
+      const newPurchaseData = new PurchaseModel(purchaseData);
+      
       const ledgerID = purchaseData.ledger;
       const purchaseType = purchaseData.type;
-
+      
       if (purchaseType === "Debit") {
         const ledger = await Ledger.findById(ledgerID);
         ledger.debitBalance += purchaseData.totalamount;
         await ledger.save();
+        
+        const purchaseBillData = {
+          date:purchaseData.date,
+          companyCode: purchaseData.companyCode,
+          name: `RP# ${purchaseData.no}`, 
+          type: 'RP', 
+          ledger:purchaseData.ledger,
+          ref: newPurchaseData._id, 
+          totalAmount: purchaseData.totalamount,
+          dueAmount: purchaseData.totalamount,
+        };
+    
+        const newPurchaseBill = new PurchaseBillModel(purchaseBillData);
+        await newPurchaseBill.save();
       }
-
+    
       if (purchaseType === "Cash") {
         newPurchaseData.cashAmount = purchaseData.totalamount;
       }
-
+  
       const existingPurchase = await PurchaseModel.findOne({
         $or: [{ billNumber: req.body.billNumber }],
       });
-
+    
       if (existingPurchase) {
         return res.json({
           success: false,
           message: "Bill No already exists.",
         });
       }
-
+    
       await newPurchaseData.save();
-
+    
       for (const entry of purchaseData.entries) {
         const productId = entry.itemName;
         const quantity = entry.qty;
         const sellingPrice = entry.sellingPrice;
-
+    
         const product = await Items.findById(productId);
-
+    
         if (!product) {
           return res.json({
             success: false,
             message: "Product not found.",
           });
         }
-
+    
         await Items.updateOne(
           { _id: productId },
           { $inc: { maximumStock: quantity }, price: sellingPrice }
         );
       }
-
+    
       return res.json({
         success: true,
         message: "Purchase entry created successfully!",
         data: newPurchaseData,
       });
     } catch (ex) {
-      return res.json({ success: false, message: ex });
+      return res.json({ success: false, message: ex.message });
     }
   },
+  
+  
 
   //  Get all purchase
   getAllpurchase: async function (req, res) {
