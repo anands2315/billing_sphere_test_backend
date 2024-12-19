@@ -165,142 +165,130 @@ const PurchaseController = {
   },
 
   //For Deleting Purchase Entry
-  deletePurchaseById: async function (req, res) {
-    const session = await mongoose.startSession();
-    session.startTransaction();
+  deletePurchase: async function (req, res) {
     try {
-      const id = req.params.id;
+      const purchaseId = req.params.id;
   
-      const getPurchase = await PurchaseModel.findById(id).session(session);
-      if (!getPurchase) {
+      const existingPurchase = await PurchaseModel.findById(purchaseId).populate('entries.itemName');
+      if (!existingPurchase) {
         return res.json({ success: false, message: "Purchase entry not found." });
       }
   
-      const ledgerID = getPurchase.ledger;
-      const purchaseType = getPurchase.type;
-      const purchaseTotalAmount = parseFloat(getPurchase.totalamount);
-  
-      for (const entry of getPurchase.entries) {
-        const productId = entry.itemName;
-        const quantity = entry.qty;
-  
-        const product = await Items.findById(productId).session(session);
-        if (!product) {
-          await session.abortTransaction();
-          session.endSession();
-          return res.json({ success: false, message: "Product not found." });
-        }
-  
-        await Items.updateOne(
-          { _id: productId },
-          { $inc: { maximumStock: -quantity } }
-        ).session(session);
-      }
-  
-      if (purchaseType === "Debit") {
-        const ledger = await Ledger.findById(ledgerID).session(session);
+      if (existingPurchase.type === "Debit") {
+        const ledger = await Ledger.findById(existingPurchase.ledger);
         if (ledger) {
-          ledger.debitBalance -= purchaseTotalAmount;
+          ledger.debitBalance -= parseFloat(existingPurchase.totalamount);
           await ledger.save();
+  
+          await PurchaseBillModel.deleteOne({ ref: purchaseId });
         }
       }
   
-      const deletedPurchase = await PurchaseModel.findByIdAndDelete(id).session(session);
-      if (!deletedPurchase) {
-        await session.abortTransaction();
-        session.endSession();
-        return res.json({ success: false, message: "Purchase not found" });
+      for (const entry of existingPurchase.entries) {
+        const product = await Items.findById(entry.itemName._id);
+        if (product) {
+          await Items.updateOne(
+            { _id: entry.itemName._id },
+            { $inc: { maximumStock: -entry.qty } }
+          );
+        }
       }
   
-      await session.commitTransaction();
-      session.endSession();
-      return res.json({ success: true, message: "Deleted Successfully!" });
+      await PurchaseModel.findByIdAndDelete(purchaseId);
+  
+      return res.json({ success: true, message: "Purchase entry deleted successfully!" });
     } catch (ex) {
-      await session.abortTransaction();
-      session.endSession();
       return res.json({ success: false, message: ex.message });
     }
   },
+  
   
 
 
   //For updating Purchase Entry
   updatePurchase: async function (req, res) {
-    const session = await mongoose.startSession();
-    session.startTransaction();
     try {
-      const { id } = req.params;
-      const updatedData = req.body;
-
-      const existingPurchase = await PurchaseModel.findById(id).session(session);
-      if (!existingPurchase) throw new Error("Purchase Entry not found.");
-
-      const ledgerID = existingPurchase.ledger;
-      const purchaseType = existingPurchase.type;
-      const purchaseTotalAmount = parseFloat(existingPurchase.totalamount);
-
-      if (purchaseType === "Debit") {
-        const ledger = await Ledger.findById(ledgerID).session(session);
-        if (ledger) {
-          ledger.debitBalance -= purchaseTotalAmount;
-          await ledger.save();
+      const purchaseId = req.params.id;
+      const updatedPurchaseData = req.body;
+  
+      const existingPurchase = await PurchaseModel.findById(purchaseId).populate('entries.itemName');
+      if (!existingPurchase) {
+        return res.json({ success: false, message: "Purchase entry not found." });
+      }
+  
+      const duplicatePurchase = await PurchaseModel.findOne({
+        billNumber: updatedPurchaseData.billNumber,
+        _id: { $ne: purchaseId },
+      });
+      if (duplicatePurchase) {
+        return res.json({ success: false, message: "Bill number already exists." });
+      }
+  
+      const ledger = await Ledger.findById(existingPurchase.ledger);
+      if (!ledger) {
+        return res.json({ success: false, message: "Ledger not found." });
+      }
+  
+      if (existingPurchase.type === "Debit") {
+        ledger.debitBalance -= parseFloat(existingPurchase.totalamount);
+        await ledger.save();
+  
+        await PurchaseBillModel.deleteOne({ ref: purchaseId });
+      }
+  
+      for (const entry of existingPurchase.entries) {
+        const product = await Items.findById(entry.itemName._id);
+        if (product) {
+          await Items.updateOne(
+            { _id: entry.itemName._id },
+            { $inc: { maximumStock: -entry.qty } }
+          );
         }
       }
-
-      for (const entry of existingPurchase.entries) {
-        const productId = entry.itemName;
-        const quantity = entry.qty;
-
-        await Items.updateOne(
-          { _id: productId },
-          { $inc: { maximumStock: -quantity } }
-        ).session(session);
+  
+      updatedPurchaseData.totalamount = parseFloat(updatedPurchaseData.totalamount);
+      updatedPurchaseData.cashAmount = parseFloat(updatedPurchaseData.cashAmount);
+      updatedPurchaseData.dueAmount = parseFloat(updatedPurchaseData.dueAmount);
+  
+      await PurchaseModel.findByIdAndUpdate(purchaseId, updatedPurchaseData, { new: true });
+  
+      if (updatedPurchaseData.type === "Debit") {
+        ledger.debitBalance += updatedPurchaseData.totalamount;
+        await ledger.save();
+  
+        const purchaseBillData = {
+          date: updatedPurchaseData.date,
+          companyCode: updatedPurchaseData.companyCode,
+          name: `RP# ${updatedPurchaseData.no}`,
+          type: 'RP',
+          ledger: updatedPurchaseData.ledger,
+          ref: purchaseId,
+          totalAmount: updatedPurchaseData.totalamount,
+          dueAmount: updatedPurchaseData.totalamount,
+        };
+  
+        const newPurchaseBill = new PurchaseBillModel(purchaseBillData);
+        await newPurchaseBill.save();
+      } else if (updatedPurchaseData.type === "Cash") {
+        updatedPurchaseData.cashAmount = updatedPurchaseData.totalamount;
       }
-
-      updatedData.totalamount = parseFloat(updatedData.totalamount);
-      updatedData.cashAmount = parseFloat(updatedData.cashAmount);
-      updatedData.dueAmount = parseFloat(updatedData.dueAmount);
-
-      const newLedger = await Ledger.findById(updatedData.ledger).session(session);
-      if (updatedData.type === "Debit" && newLedger) {
-        newLedger.debitBalance += updatedData.totalamount;
-        await newLedger.save();
+  
+      for (const entry of updatedPurchaseData.entries) {
+        const product = await Items.findById(entry.itemName);
+        if (product) {
+          await Items.updateOne(
+            { _id: entry.itemName },
+            { $inc: { maximumStock: entry.qty }, price: entry.sellingPrice }
+          );
+        }
       }
-      if (updatedData.type === "Cash") {
-        updatedData.cashAmount = updatedData.totalamount;
-      }
-
-      for (const entry of updatedData.entries) {
-        const productId = entry.itemName;
-        const quantity = entry.qty;
-        const sellingPrice = entry.sellingPrice;
-
-        await Items.updateOne(
-          { _id: productId },
-          { $inc: { maximumStock: quantity }, price: sellingPrice }
-        ).session(session);
-      }
-
-      const updatedPurchase = await PurchaseModel.findByIdAndUpdate(
-        id,
-        updatedData,
-        { new: true, session }
-      );
-
-      await session.commitTransaction();
-      session.endSession();
-
-      return res.json({
-        success: true,
-        message: "Purchase entry updated successfully!",
-        data: updatedPurchase,
-      });
+  
+      return res.json({ success: true, message: "Purchase entry updated successfully!" });
     } catch (ex) {
-      await session.abortTransaction();
-      session.endSession();
       return res.json({ success: false, message: ex.message });
     }
   },
+  
 
 
 };

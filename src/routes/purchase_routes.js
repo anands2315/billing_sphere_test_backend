@@ -34,7 +34,7 @@ PurchaseRoutes.get(
 PurchaseRoutes.delete(
   "/delete/:id",
   // verifyToken,
-  PurchaseController.deletePurchaseById
+  PurchaseController.deletePurchase
 );
 
 PurchaseRoutes.put(
