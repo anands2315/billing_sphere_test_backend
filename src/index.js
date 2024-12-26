@@ -34,11 +34,9 @@ mongoose
     // "mongodb+srv://johngospel003:LlJ6bdJ35zCzc53O@cluster0.efot3tr.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
     // "mongodb+srv://billingspherefuerte:VhjtujqeZDbYvn6o@billingsphere.sg7iac6.mongodb.net/billingSphere?retryWrites=true&w=majority"
     // "mongodb+srv://billingspherefuerte:ezMcxwF01Wk2Gv2C@cluster0.e4gsqkd.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
-    // "mongodb+srv://anandsinghfuerte:anandsingh2315@cluster0.maywh.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
+    "mongodb+srv://anandsinghfuerte:anandsingh2315@cluster0.maywh.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
     // "mongodb://fdsupermartbd:fuerteretail1313@35.154.157.177:27017/?authSource=test"
-    // "mongodb://fdsupermartbd:fuerteretail1313@35.154.157.177:27017/?authSource=test"
-    // "mongodb://fdsupermartbd:fuerteretail1313@35.154.157.177:27017/?authSource=test"
-    "mongodb+srv://anandsinghfuerte:anand2315@cluster0.b2kwc.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
+    // "mongodb+srv://anandsinghfuerte:anand2315@cluster0.b2kwc.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
   )
   .then(() => {
     console.log("Connected to database");
@@ -62,12 +60,12 @@ const findDuplicateBarcodes = async () => {
             companyCode: "$companyCode",
           },
           count: { $sum: 1 },
-          items: { $push: "$_id" }, // Optional: to track item IDs
+          items: { $push: "$_id" }, 
         },
       },
       {
         $match: {
-          count: { $gt: 1 }, // Filter groups with more than 1 item
+          count: { $gt: 1 }, 
         },
       },
       {
@@ -142,6 +140,18 @@ app.use("/api/ledger", LedgerRoutes);
 //Routes for Ledger Group
 const LedgerGroupRoutes = require("./routes/ledger_group_routes");
 app.use("/api/ledger-group", LedgerGroupRoutes);
+
+//Routes for Stock Quotation
+const StockQuotationRoutes = require("./routes/stock_quotation_routes");
+app.use("/api/stock-quotation", StockQuotationRoutes);
+
+//Routes for Proforma Invoice
+const ProformaInvoiceRoute = require("./routes/proforma_invoice_routes");
+app.use("/api/proforma-invoice", ProformaInvoiceRoute);
+
+//Routes for Stock Physical Verification
+const StockPhysicalVerificationRoutes = require("./routes/stock_physical_verification_routes");
+app.use("/api/stock-physical-verification", StockPhysicalVerificationRoutes);
 
 //Routes for purchasing
 const PurchaseRoutes = require("./routes/purchase_routes");

@@ -164,7 +164,6 @@ const PurchaseController = {
     }
   },
 
-  //For Deleting Purchase Entry
   deletePurchase: async function (req, res) {
     try {
       const purchaseId = req.params.id;
@@ -202,10 +201,6 @@ const PurchaseController = {
     }
   },
   
-  
-
-
-  //For updating Purchase Entry
   updatePurchase: async function (req, res) {
     try {
       const purchaseId = req.params.id;
@@ -289,8 +284,6 @@ const PurchaseController = {
     }
   },
   
-
-
 };
 
 module.exports = PurchaseController;

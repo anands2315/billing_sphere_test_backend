@@ -51,7 +51,7 @@ const fetchAllItems = async (req, res) => {
 };
 
 const getItems = async (req, res) => { 
-  ` `
+  
   try {
     let page = parseInt(req.query.page) || 1;
     let limit = req.query.limit ? parseInt(req.query.limit) : 2000;
@@ -59,7 +59,7 @@ const getItems = async (req, res) => {
     // Get companyCode from params
     const { companyCode } = req.params;
 
-    const skip = (page - 1) * (limit || 0); // If limit is null, skip will be 0
+    const skip = (page - 1) * (limit || 0); 
 
     // Cache Key
     const cacheKey = `items_${companyCode}_page_${page}_limit_${limit}`;
