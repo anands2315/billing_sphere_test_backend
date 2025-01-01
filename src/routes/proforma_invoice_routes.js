@@ -6,6 +6,6 @@ ProformaInvoiceRoute.post("/create", ProformaInvoiceController.createProformaInv
 ProformaInvoiceRoute.get("/get-all", ProformaInvoiceController.getAllProformaInvoices);
 ProformaInvoiceRoute.get("/get-by-id/:id", ProformaInvoiceController.getProformaInvoiceById);
 ProformaInvoiceRoute.put("/update/:id", ProformaInvoiceController.updateProformaInvoice);
-ProformaInvoiceRoute.delete("delete/:id", ProformaInvoiceController.deleteProformaInvoice);
+ProformaInvoiceRoute.delete("/delete/:id", ProformaInvoiceController.deleteProformaInvoice);
 
 module.exports = ProformaInvoiceRoute;

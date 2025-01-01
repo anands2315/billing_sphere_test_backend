@@ -6,6 +6,6 @@ StockPhysicalVerificationRoutes.post("/create", StockPhysicalVerificationControl
 StockPhysicalVerificationRoutes.get("/get-all", StockPhysicalVerificationController.getAllStockPhysicalVerification);
 StockPhysicalVerificationRoutes.get("/get-by-id/:id", StockPhysicalVerificationController.getStockPhysicalVerificationById);
 StockPhysicalVerificationRoutes.put("/update/:id", StockPhysicalVerificationController.updateStockPhysicalVerification);
-StockPhysicalVerificationRoutes.delete("delete/:id", StockPhysicalVerificationController.deleteStockPhysicalVerification);
+StockPhysicalVerificationRoutes.delete("/delete/:id", StockPhysicalVerificationController.deleteStockPhysicalVerification);
 
 module.exports = StockPhysicalVerificationRoutes;

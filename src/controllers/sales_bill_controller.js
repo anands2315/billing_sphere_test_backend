@@ -66,6 +66,108 @@ const createSalesBill = async (req, res) => {
     }
 };
 
+const fetchSalesBillsByParty = async (req, res) => {
+    try {
+      const { party, companyCode } = req.params;
+      const { fillterDueAmount } = req.query;
+  
+      // Fetch sales bills that match the party name and company code
+      const query = {
+        ledger: party,
+        companyCode: companyCode,
+      };
+  
+      if (fillterDueAmount === "true") {
+        query.dueAmount = { $ne: 0 };
+      }
+      // If filterNonZeroDue is false or undefined, fetch all bills regardless of due amount
+  
+      const salesBills = await SalesBillModel.find(query);
+  
+      if (salesBills.length === 0) {
+        return res.status(404).json({
+          success: false,
+          message:
+            "No sales bills found for the specified party and company code.",
+        });
+      }
+  
+      return res.status(200).json({ success: true, data: salesBills });
+    } catch (error) {
+      console.error("Error fetching sales bills:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Failed to fetch sales bills.",
+        error: error.message,
+      });
+    }
+  };
+  
+  const getAllSalesBillsFillter = async (req, res) => {
+    try {
+      const { companyCode } = req.params;
+      const { ledgerGroup, type } = req.query;
+      const filter = {};
+  
+      // Check if ledgerGroup is null or empty
+      if (!ledgerGroup || ledgerGroup.trim() === "") {
+        return res.status(400).json({
+          success: false,
+          message: "Ledger group is empty.",
+        });
+      }
+  
+      // If type is provided and not empty, add it to the filter
+      if (type && type.trim() !== "") {
+        filter.type = type;
+      }
+  
+      // If companyCode is provided, add it to the filter
+      if (companyCode) {
+        filter.companyCode = companyCode;
+      }
+  
+      // Always include dueAmount filter
+      filter.dueAmount = { $ne: 0 };
+  
+      const ledgers = await Ledger.find({ ledgerGroup }); // Assuming ledgerGroupId is in the Ledger collection
+  
+      const ledgerIds = ledgers.map((ledger) => ledger._id);
+  
+      if (ledgerIds.length > 0) {
+        filter.ledger = { $in: ledgerIds };
+      } else {
+        return res.status(200).json({
+          success: true,
+          message: "No sales bills found for the specified filters.",
+          data: [],
+        });
+      }
+  
+      // Fetch sales bills based on the constructed filter
+      const salesBills = await SalesBillModel.find(filter);
+  
+      if (salesBills.length === 0) {
+        return res.status(200).json({
+          success: true,
+          message: "No sales bills found for the specified filters.",
+          data: [],
+        });
+      }
+  
+      res.status(200).json({
+        success: true,
+        message: "Sales Bills fetched successfully.",
+        data: salesBills,
+      });
+    } catch (error) {
+      console.error("Error fetching sales bills:", error);
+      res.status(500).json({ message: "Failed to fetch sales bills", error });
+    }
+  };
+  
+  
+
 // Update a sales bill by ID
 const updateSalesBill = async (req, res) => {
     try {
@@ -139,6 +241,8 @@ const deleteSalesBill = async (req, res) => {
 module.exports = {
     getAllSalesBills,
     getSalesBillById,
+    getAllSalesBillsFillter,
+    fetchSalesBillsByParty,
     createSalesBill,
     updateSalesBill,
     deleteSalesBill,

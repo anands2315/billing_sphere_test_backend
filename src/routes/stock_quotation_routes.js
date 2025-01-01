@@ -6,6 +6,6 @@ StockQuotationRoutes.post("/create", StockQuotationController.createStockQuotati
 StockQuotationRoutes.get("/get-all", StockQuotationController.getAllStockQuotation);
 StockQuotationRoutes.get("/get-by-id/:id", StockQuotationController.getStockQuotationById);
 StockQuotationRoutes.put("/update/:id", StockQuotationController.updateStockQuotation);
-StockQuotationRoutes.delete("delete/:id", StockQuotationController.deleteStockQuotation);
+StockQuotationRoutes.delete("/delete/:id", StockQuotationController.deleteStockQuotation);
 
 module.exports = StockQuotationRoutes;
