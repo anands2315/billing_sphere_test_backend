@@ -118,36 +118,27 @@ const searchItemsByName = async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 20;
 
-    const { brand, group, codeNo } = req.query;
-
-    const filter = {
-      companyCode: companyCode,
+    // Perform the search with regex for case-insensitive matching and paginate results
+    const items = await Items.find({
       itemName: { $regex: searchQuery, $options: "i" },
-    };
-
-    if (brand) {
-      filter.itemBrand = brand; 
-    }
-
-    if (group) {
-      filter.itemGroup = group; 
-    }
-
-    if (codeNo) {
-      filter.codeNo = { $regex: codeNo, $options: "i" }; 
-    }
-
-    const items = await Items.find(filter)
+      companyCode: companyCode, // Filter by companyCode
+    })
       .skip((page - 1) * limit)
       .limit(limit);
 
-    const totalItems = await Items.countDocuments(filter);
+    // Get the total number of matching items (for pagination info)
+    // const totalItems = await Items.countDocuments({
+    //   itemName: { $regex: searchQuery, $options: "i" },
+    //   companyCode: companyCode,
+    // });
 
     res.status(200).json({
       success: true,
-      totalItems: totalItems,
+      // totalItems: totalItems,
+      totalItems: items.length,
       currentPage: page,
-      totalPages: Math.ceil(totalItems / limit),
+
+      // totalPages: Math.ceil(totalItems / limit),
       data: items,
     });
   } catch (error) {
