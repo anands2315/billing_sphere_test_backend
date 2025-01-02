@@ -9,12 +9,10 @@ purchaseBillRoutes.get(
     "/get-by-ledger/:companyCode/:ledger",
     PurchaseBillController.fetchPurchaseBillsByParty
   );
-  
   purchaseBillRoutes.get(
     "/get-by-purchasefillter/:companyCode",
     PurchaseBillController.getAllPurchaseBillsFillter
-  );
-  
+  );  
 purchaseBillRoutes.put('/update/:id', PurchaseBillController.updatePurchaseBill); 
 purchaseBillRoutes.delete('/delete/:id', PurchaseBillController.deletePurchaseBill); 
 

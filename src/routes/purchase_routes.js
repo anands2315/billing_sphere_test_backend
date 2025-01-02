@@ -26,6 +26,12 @@ PurchaseRoutes.get(
 );
 
 PurchaseRoutes.get(
+  "/getByItemName/:itemNameId",
+  // verifyToken,
+  PurchaseController.fetchPurchaseByItemName
+);
+
+PurchaseRoutes.get(
   "/getByLedger/:ledger",
   // verifyToken,
   PurchaseController.fetchPurchaseByLedger

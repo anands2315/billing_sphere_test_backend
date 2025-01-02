@@ -2,6 +2,7 @@ const SalesEntry = require("../models/sales_entry_model");
 const Items = require("../models/items_model");
 const Ledger = require("../models/ledger_model");
 const SalesBillModel = require("../models/sales_bills_model");
+const mongoose = require('mongoose');
 const fs = require("fs");
 const pdfdocument = require("pdfkit");
 const pdfTable = require("voilab-pdf-table");
@@ -306,6 +307,26 @@ const fetchSalesByParty = async (req, res) => {
   }
 };
 
+const fetchSalesByItemName = async (req, res) => {
+  const { itemNameId } = req.params;
+
+  try {
+    if (!mongoose.Types.ObjectId.isValid(itemNameId)) {
+      return res.status(400).json({ message: "Invalid itemName ID" });
+    }
+
+    const salesEntries = await SalesEntry.find({
+      entries: {
+        $elemMatch: { itemName: itemNameId },
+      },
+    }); 
+
+    res.status(200).json(salesEntries);
+  } catch (error) {
+    console.error("Error fetching sales entries:", error.message);
+    res.status(500).json({ message: "Failed to fetch sales entries", error: error.message });
+  }
+};
 
 //pagination
 const getSales = async (req, res) => {
@@ -452,6 +473,7 @@ module.exports = {
   fetchSalesByBillNumber,
   fetchSalesByParty,
   getSingleSales,
+  fetchSalesByItemName,
   downloadReceipt,
   fetchAllSales,
   getSales,

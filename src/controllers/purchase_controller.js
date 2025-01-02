@@ -21,7 +21,7 @@ const PurchaseController = {
       
       if (purchaseType === "Debit") {
         const ledger = await Ledger.findById(ledgerID);
-        ledger.debitBalance += purchaseData.totalamount;
+        ledger.debitBalance -= purchaseData.totalamount;
         await ledger.save();
         
         const purchaseBillData = {
@@ -148,6 +148,27 @@ const PurchaseController = {
     }
   },
 
+   fetchPurchaseByItemName : async (req, res) => {
+    const { itemNameId } = req.params;
+  
+    try {
+      if (!mongoose.Types.ObjectId.isValid(itemNameId)) {
+        return res.status(400).json({ message: "Invalid itemName ID" });
+      }
+  
+      const purchaseEntries = await PurchaseModel.find({
+        entries: {
+          $elemMatch: { itemName: itemNameId },
+        },
+      }); 
+  
+      res.status(200).json(purchaseEntries);
+    } catch (error) {
+      console.error("Error fetching purchase entries:", error.message);
+      res.status(500).json({ message: "Failed to fetch purchase entries", error: error.message });
+    }
+  },
+
   fetchPurchaseByLedger: async function (req, res) {
     try {
       const { ledger } = req.params;
@@ -176,7 +197,7 @@ const PurchaseController = {
       if (existingPurchase.type === "Debit") {
         const ledger = await Ledger.findById(existingPurchase.ledger);
         if (ledger) {
-          ledger.debitBalance -= parseFloat(existingPurchase.totalamount);
+          ledger.debitBalance += parseFloat(existingPurchase.totalamount);
           await ledger.save();
   
           await PurchaseBillModel.deleteOne({ ref: purchaseId });
@@ -225,7 +246,7 @@ const PurchaseController = {
       }
   
       if (existingPurchase.type === "Debit") {
-        ledger.debitBalance -= parseFloat(existingPurchase.totalamount);
+        ledger.debitBalance += parseFloat(existingPurchase.totalamount);
         await ledger.save();
   
         await PurchaseBillModel.deleteOne({ ref: purchaseId });
@@ -248,7 +269,7 @@ const PurchaseController = {
       await PurchaseModel.findByIdAndUpdate(purchaseId, updatedPurchaseData, { new: true });
   
       if (updatedPurchaseData.type === "Debit") {
-        ledger.debitBalance += updatedPurchaseData.totalamount;
+        ledger.debitBalance -= updatedPurchaseData.totalamount;
         await ledger.save();
   
         const purchaseBillData = {

@@ -20,6 +20,8 @@ SalesEntryRoutes.get("/fetch-sales-by-BillNumber/:billNumber", SalesEntryControl
 
 SalesEntryRoutes.get("/fetch-sales-by-Party/:party", SalesEntryController.fetchSalesByParty);
 
+SalesEntryRoutes.get("/fetch-sales-by-itemName/:itemNameId", SalesEntryController.fetchSalesByItemName);
+
 SalesEntryRoutes.delete(
   "/delete/:id",
   verifyToken,
