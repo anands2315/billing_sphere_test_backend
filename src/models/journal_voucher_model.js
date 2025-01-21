@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
 
-const PaymentSchema = new mongoose.Schema({
+const JournalVoucherScheme = new mongoose.Schema({
   no: {
     type: Number,
     required: true,
@@ -39,30 +39,34 @@ const PaymentSchema = new mongoose.Schema({
     },
   ],
   billwise: [
-         {
-             date: {
-                 type: String,
-                 required: true,
-             },
-             purchaseBill: {
-                 type: mongoose.Schema.Types.ObjectId,
-                 ref: "PurchaseBill",
-                 required: false,
-             },
-             billType: {
-                 type: String,
-                 required: true,
-             },
-             billName: {
-                 type: String,
-                 required: false,
-             },
-             amount: {
-                 type: Number,
-                 required: true,
-             },
-         },
-     ],
+    {
+        date: {
+            type: String,
+            required: true,
+        },
+        Bill: {
+            type: mongoose.Schema.Types.ObjectId,
+            required: false,
+        },
+        ledger: {
+          type: mongoose.Schema.Types.ObjectId,
+          required: false, 
+        },
+        billType: {
+            type: String,
+            required: true,
+        },
+        billName: {
+            type: String,
+            required: false,
+        },
+        amount: {
+            type: Number,
+            required: false,
+        },
+    },
+],
+
   narration: {
     type: String,
     required: false,
@@ -72,7 +76,6 @@ const PaymentSchema = new mongoose.Schema({
     ref: "NewCompany",
     required: true,
   },
-
   chequeDetails: {
     chequeNo: {
       type: String,
@@ -99,7 +102,6 @@ const PaymentSchema = new mongoose.Schema({
       required: false,
     },
   },
-
 });
 
-module.exports = mongoose.model("Payment", PaymentSchema);
+module.exports = mongoose.model("JournalVoucher", JournalVoucherScheme);

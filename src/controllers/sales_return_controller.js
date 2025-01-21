@@ -78,6 +78,8 @@ const SalesReturnController = {
             }
     
             await ledger.save({ session });
+
+            await newSalesReturnData.save({ session });
     
             for (const entry of salesReturnData.entries) {
                 const productId = entry.itemName;
