@@ -24,6 +24,10 @@ const PurchaseBillSchema = new mongoose.Schema({
         type: String
     },
     dueAmount: { type: String },
+    dueDate : {
+        type: String,
+        required: true,
+    }
 });
 
 const PurchaseBillModel = mongoose.model("purchaseBill", PurchaseBillSchema);

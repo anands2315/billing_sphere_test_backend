@@ -61,6 +61,10 @@ const PaymentSchema = new mongoose.Schema({
                  type: Number,
                  required: true,
              },
+             dueDate: {
+              type: String,
+              required: true,
+            },
          },
      ],
   narration: {

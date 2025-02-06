@@ -41,6 +41,8 @@ router.get("/unique-ids", ItemsController.getUniqueFieldIds);
 
 router.get("/group", ItemsController.groupedItems);
 
+router.get("/groupDetails", ItemsController.groupedItemsDetails);
+
 // Update a specific item by ID
 router.put(
   "/update-item/:itemId",

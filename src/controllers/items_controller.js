@@ -1,5 +1,6 @@
 const Items = require("../models/items_model");
 const BarcodePrint = require("../models/barcode_print_model");
+const TaxModel = require("../models/tax_model");
 const NodeCache = require("node-cache");
 const mongoose = require('mongoose');
 const myCache = new NodeCache({ stdTTL: 100, checkperiod: 120 });
@@ -218,11 +219,19 @@ const getUniqueFieldIds = async (req, res) => {
 
 const groupedItems = async (req, res) => {
   try {
-    const { groupBy, companyCode, page = 1, limit = 20, search = "" } = req.query;
-    console.log(".........");
-    console.log(groupBy);
-    console.log(companyCode);
-    console.log(search);
+    const {
+      groupBy,
+      companyCode,
+      page = 1,
+      limit = 20,
+      search = "",
+      itemGroup,
+      itemBrand,
+      taxCategory,
+      stockFilter,
+      includeMrp = "false",
+      specific, 
+    } = req.query;
 
     const validGroupFields = ["itemGroup", "itemBrand", "taxCategory", "hsnCode"];
     if (!groupBy || !validGroupFields.includes(groupBy)) {
@@ -232,28 +241,72 @@ const groupedItems = async (req, res) => {
       });
     }
 
-    const filter = companyCode ? { companyCode: companyCode } : {};
-
-    if (search) {
-      const regex = new RegExp(search, "i"); 
-      filter.$or = [
-        { itemName: { $regex: regex } }, 
-      ];
+    if (search && !mongoose.Types.ObjectId.isValid(search)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid search parameter (not a valid ObjectId)",
+      });
     }
 
-    // Fetch the items with the filter
-    const items = await Items.find(filter);
+    const filter = {};
+
+    if (companyCode) {
+      filter.companyCode = companyCode;
+    }
+
+    if (search) {
+      const searchId = new mongoose.Types.ObjectId(search);
+      filter._id = searchId;
+    }
+
+    if (itemGroup) {
+      filter.itemGroup = itemGroup;
+    }
+
+    if (itemBrand) {
+      filter.itemBrand = itemBrand;
+    }
+
+    if (taxCategory) {
+      filter.taxCategory = taxCategory;
+    }
+
+    if (stockFilter) {
+      switch (stockFilter) {
+        case "zero":
+          filter.maximumStock = 0;
+          break;
+        case "negative":
+          filter.maximumStock = { $lt: 0 };
+          break;
+        case "zero_or_negative":
+          filter.maximumStock = { $lte: 0 };
+          break;
+        case "positive":
+          filter.maximumStock = { $gt: 0 };
+          break;
+        default:
+          break;
+      }
+    }
+
+    // Add specific filter based on groupBy
+    if (specific) {
+      filter[groupBy] = specific; // Dynamically filter based on the groupBy value
+    }
+
+    const items = await Items.find(filter).lean();
 
     if (items.length === 0) {
       return res.status(404).json({
         success: false,
-        message: `No items found for companyCode: ${companyCode}`,
+        message: "No items found matching the criteria.",
       });
     }
 
-    // Group the items by the selected field (groupBy)
+    // Group items by the specified field
     const grouped = items.reduce((result, item) => {
-      const key = item[groupBy];
+      const key = item[groupBy] || "undefined";
       if (!result[key]) {
         result[key] = [];
       }
@@ -261,13 +314,27 @@ const groupedItems = async (req, res) => {
       return result;
     }, {});
 
-    // Flatten the grouped items into a list
-    const groupedItems = Object.values(grouped).flat();
+    let groupedItems = Object.values(grouped).flat();
 
+    if (includeMrp === "true") {
+      groupedItems = await Promise.all(
+        groupedItems.map(async (item) => {
+          if (item.taxCategory) {
+            const taxRate = await TaxModel.findById(item.taxCategory);
+            const taxPercentage = taxRate ? taxRate.rate : 0;
+
+            // Calculate MRP including the tax rate
+            item.mrp = item.mrp + item.mrp * (taxPercentage / 100);
+          }
+          return item;
+        })
+      );
+    }
+
+    // Pagination
     const totalItems = groupedItems.length;
     const totalPages = Math.ceil(totalItems / limit);
     const skip = (page - 1) * limit;
-
     const paginatedItems = groupedItems.slice(skip, skip + limit);
 
     res.status(200).json({
@@ -288,6 +355,135 @@ const groupedItems = async (req, res) => {
     });
   }
 };
+
+
+
+const groupedItemsDetails = async (req, res) => {
+  try {
+    const {
+      groupBy,
+      companyCode,
+      itemGroup,
+      itemBrand,
+      taxCategory,
+      stockFilter,
+      search = "", 
+    } = req.query;
+
+    const validGroupFields = ["itemGroup", "itemBrand", "taxCategory", "hsnCode"];
+    if (!groupBy || !validGroupFields.includes(groupBy)) {
+      return res.status(400).json({
+        success: false,
+        message: `Invalid or missing groupBy parameter. Allowed values are: ${validGroupFields.join(", ")}`,
+      });
+    }
+
+    if (search && !mongoose.Types.ObjectId.isValid(search)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid search parameter (not a valid ObjectId)",
+      });
+    }
+
+    const filter = {};
+
+    if (companyCode) {
+      filter.companyCode = companyCode;
+    }
+
+    if (search) {
+      const searchId = new mongoose.Types.ObjectId(search);
+      filter._id = searchId;
+    }
+
+    if (itemGroup) {
+      if (!mongoose.Types.ObjectId.isValid(itemGroup)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid itemGroup (not a valid ObjectId)",
+        });
+      }
+      filter.itemGroup = new mongoose.Types.ObjectId(itemGroup);
+    }
+
+    if (itemBrand) {
+      if (!mongoose.Types.ObjectId.isValid(itemBrand)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid itemBrand (not a valid ObjectId)",
+        });
+      }
+      filter.itemBrand = new mongoose.Types.ObjectId(itemBrand);
+    }
+
+    if (taxCategory) {
+      if (!mongoose.Types.ObjectId.isValid(taxCategory)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid taxCategory (not a valid ObjectId)",
+        });
+      }
+      filter.taxCategory = new mongoose.Types.ObjectId(taxCategory);
+    }
+
+    if (stockFilter) {
+      switch (stockFilter) {
+        case "zero":
+          filter.maximumStock = 0;
+          break;
+        case "negative":
+          filter.maximumStock = { $lt: 0 };
+          break;
+        case "zero_or_negative":
+          filter.maximumStock = { $lte: 0 };
+          break;
+        case "positive":
+          filter.maximumStock = { $gt: 0 };
+          break;
+        default:
+          break;
+      }
+    }
+
+    const groupedData = await Items.aggregate([
+      { $match: filter },
+      {
+        $group: {
+          _id: `$${groupBy}`,
+          totalMaximumStock: { $sum: "$maximumStock" },
+          totalValue: { $sum: { $multiply: ["$mrp", "$maximumStock"] } },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          group: "$_id",
+          totalMaximumStock: 1,
+          totalValue: 1,
+        },
+      },
+    ]);
+
+    if (groupedData.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "No items found matching the criteria.",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: groupedData,
+    });
+  } catch (error) {
+    console.error("Error fetching grouped item details:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error fetching grouped item details",
+    });
+  }
+};
+
 
 
 // const updateItem = async (req, res) => {
@@ -674,6 +870,7 @@ module.exports = {
   getMultipleItemById,
   getUniqueFieldIds,
   groupedItems,
+  groupedItemsDetails,
   getItemByBarCode,
   insertItemsIntoDB,
   updateAllItems,

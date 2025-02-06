@@ -64,6 +64,10 @@ const CreditNoteWoVoucherScheme = new mongoose.Schema({
             type: Number,
             required: false,
         },
+        dueDate: {
+          type: String,
+          required: true,
+        },
     },
 ],
 

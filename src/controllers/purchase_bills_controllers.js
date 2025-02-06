@@ -105,7 +105,7 @@ const fetchPurchaseBillsByParty = async (req, res) => {
       }
   
       // Always include dueAmount filter
-      filter.dueAmount = { $ne: 0 };
+      // filter.dueAmount = { $ne: 0 };
   
       const ledgers = await Ledger.find({ ledgerGroup }); // Assuming ledgerGroupId is in the Ledger collection
   

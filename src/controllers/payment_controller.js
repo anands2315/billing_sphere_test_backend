@@ -61,6 +61,7 @@ const PaymentController = {
             ref: payment._id,
             totalAmount: parsedAmount,
             dueAmount: parsedAmount,
+            dueDate : bill.dueDate,
           });
 
           await newBill.save({ session });
@@ -239,6 +240,7 @@ const PaymentController = {
             ref: paymentId,
             totalAmount: parsedAmount,
             dueAmount: parsedAmount,
+            dueDate : bill.dueDate,
           });
           console.log("Creating new bill reference for:", bill.billName);
 

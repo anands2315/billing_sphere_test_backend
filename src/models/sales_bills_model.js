@@ -32,6 +32,10 @@ const SalesBillSchema = new mongoose.Schema({
     dueAmount: {
         type: String,
         required: true,
+    },
+    dueDate : {
+        type: String,
+        required: true,
     }
 })
 

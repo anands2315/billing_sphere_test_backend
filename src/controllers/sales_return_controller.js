@@ -15,6 +15,7 @@ const SalesReturnController = {
     
         try {
             const salesReturnData = req.body;
+            console.log(salesReturnData);
             salesReturnData.totalAmount = parseFloat(salesReturnData.totalAmount);
             salesReturnData.cashAmount = parseFloat(salesReturnData.cashAmount);
     
@@ -45,6 +46,7 @@ const SalesReturnController = {
                             ref: newSalesReturnData._id,
                             totalAmount: amount,
                             dueAmount: amount,
+                            dueDate : bill.dueDate,
                         });
     
                         await newSalesBill.save({ session });
@@ -217,6 +219,7 @@ const SalesReturnController = {
                             ref: salesReturnId,
                             totalAmount: amount,
                             dueAmount: amount,
+                            dueDate : bill.dueDate,
                         });
     
                         await newSalesBill.save({ session });

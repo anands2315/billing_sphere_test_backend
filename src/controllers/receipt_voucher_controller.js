@@ -71,6 +71,7 @@ const ReceiptVoucherController = {
                         ref: receiptVch._id,
                         totalAmount: parsedAmount,
                         dueAmount: parsedAmount,
+                        dueDate : bill.dueDate,
                     });
 
                     await newBill.save({ session });
@@ -83,6 +84,7 @@ const ReceiptVoucherController = {
                     }
                 }
             }
+
             console.log("4");
 
             await receiptVch.save({ session });
@@ -237,6 +239,7 @@ const ReceiptVoucherController = {
                         ref: existingVoucher._id,
                         totalAmount: parsedAmount,
                         dueAmount: parsedAmount,
+                        dueDate : bill.dueDate,
                     });
 
                     await newBill.save({ session });

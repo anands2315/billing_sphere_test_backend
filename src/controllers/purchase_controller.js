@@ -8,85 +8,109 @@ const PurchaseBillModel = require("../models/purchase_bills_models");
 const PurchaseController = {
 
   createPurchase: async function (req, res) {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
     try {
-      const purchaseData = req.body;
-      purchaseData.totalamount = parseFloat(purchaseData.totalamount);
-      purchaseData.cashAmount = parseFloat(purchaseData.cashAmount);
-      purchaseData.dueAmount = parseFloat(purchaseData.dueAmount);
-      
-      const newPurchaseData = new PurchaseModel(purchaseData);
-      
-      const ledgerID = purchaseData.ledger;
-      const purchaseType = purchaseData.type;
-      
-      if (purchaseType === "Debit") {
-        const ledger = await Ledger.findById(ledgerID);
-        ledger.debitBalance -= purchaseData.totalamount;
-        await ledger.save();
-        
-        const purchaseBillData = {
-          date:purchaseData.date,
-          companyCode: purchaseData.companyCode,
-          name: `RP# ${purchaseData.no}`, 
-          type: 'RP', 
-          ledger:purchaseData.ledger,
-          ref: newPurchaseData._id, 
-          totalAmount: purchaseData.totalamount,
-          dueAmount: purchaseData.totalamount,
-        };
-    
-        const newPurchaseBill = new PurchaseBillModel(purchaseBillData);
-        await newPurchaseBill.save();
-      }
-    
-      if (purchaseType === "Cash") {
-        newPurchaseData.cashAmount = purchaseData.totalamount;
-      }
-  
-      const existingPurchase = await PurchaseModel.findOne({
-        $or: [{ billNumber: req.body.billNumber }],
-      });
-    
-      if (existingPurchase) {
-        return res.json({
-          success: false,
-          message: "Bill No already exists.",
-        });
-      }
-    
-      await newPurchaseData.save();
-    
-      for (const entry of purchaseData.entries) {
-        const productId = entry.itemName;
-        const quantity = entry.qty;
-        const sellingPrice = entry.sellingPrice;
-    
-        const product = await Items.findById(productId);
-    
-        if (!product) {
-          return res.json({
-            success: false,
-            message: "Product not found.",
-          });
+        const purchaseData = req.body;
+
+        purchaseData.totalamount = parseFloat(purchaseData.totalamount);
+        purchaseData.cashAmount = parseFloat(purchaseData.cashAmount);
+        purchaseData.dueAmount = parseFloat(purchaseData.dueAmount);
+
+        const newPurchaseData = new PurchaseModel(purchaseData);
+        const ledgerID = purchaseData.ledger;
+        const purchaseType = purchaseData.type;
+
+        const ledger = await Ledger.findById(ledgerID).session(session);
+        if (!ledger) throw new Error("Ledger not found.");
+
+        const existingPurchase = await PurchaseModel.findOne({ billNumber: req.body.billNumber }).session(session);
+        if (existingPurchase) throw new Error("Bill No already exists.");
+
+        await newPurchaseData.save({ session });
+
+        for (const entry of purchaseData.entries) {
+            const productId = entry.itemName;
+            const quantity = entry.qty;
+            const sellingPrice = entry.sellingPrice;
+
+            const product = await Items.findById(productId).session(session);
+            if (!product) throw new Error("Product not found.");
+
+            await Items.updateOne(
+                { _id: productId },
+                { $inc: { maximumStock: quantity }, price: sellingPrice },
+                { session }
+            );
         }
-    
-        await Items.updateOne(
-          { _id: productId },
-          { $inc: { maximumStock: quantity }, price: sellingPrice }
-        );
-      }
-    
-      return res.json({
-        success: true,
-        message: "Purchase entry created successfully!",
-        data: newPurchaseData,
-      });
+
+        if (purchaseType !== "Cash") {
+            for (const bill of purchaseData.billwise) {
+                const billType = bill.billType;
+                const amount = parseFloat(bill.amount);
+
+                if (billType === "New Ref.") {
+                    const newPurchaseBill = new PurchaseBillModel({
+                        date: purchaseData.date,
+                        companyCode: purchaseData.companyCode,
+                        name: bill.billName,
+                        type: "RP",
+                        ledger: purchaseData.ledger,
+                        ref: newPurchaseData._id,
+                        totalAmount: amount,
+                        dueAmount: amount,
+                        dueDate: bill.dueDate,
+                    });
+
+                    await newPurchaseBill.save({ session });
+
+                    const billwiseEntry = newPurchaseData.billwise.find(
+                        (b) => b.billName === bill.billName && b.billType === "New Ref." && b.amount === amount
+                    );
+                    if (billwiseEntry) {
+                        billwiseEntry.purchaseBill = newPurchaseBill._id;
+                    }
+                } else if (billType === "Against Ref.") {
+                    const purchaseBillId = bill.purchaseBill;
+
+                    if (!purchaseBillId) throw new Error("Purchase Bill ID is required for Against Ref.");
+
+                    const purchaseBill = await PurchaseBillModel.findById(purchaseBillId).session(session);
+                    if (!purchaseBill) throw new Error("Purchase Bill not found.");
+
+                    if (purchaseBill.type === "RP") {
+                        purchaseBill.dueAmount = parseFloat(purchaseBill.dueAmount) + amount;
+                    } else {
+                        purchaseBill.dueAmount = parseFloat(purchaseBill.dueAmount) - amount;
+                    }
+
+                    await purchaseBill.save({ session });
+                }
+
+                ledger.debitBalance -= amount;
+            }
+        } else {
+            newPurchaseData.cashAmount = purchaseData.totalamount;
+        }
+
+        await ledger.save({ session });
+        await newPurchaseData.save({ session });
+
+        await session.commitTransaction();
+        session.endSession();
+
+        return res.json({
+            success: true,
+            message: "Purchase entry created successfully!",
+            data: newPurchaseData,
+        });
     } catch (ex) {
-      return res.json({ success: false, message: ex.message });
+        await session.abortTransaction();
+        session.endSession();
+        return res.json({ success: false, message: ex.message });
     }
-  },
-  
-  
+},
 
   //  Get all purchase
   getAllpurchase: async function (req, res) {
@@ -98,7 +122,6 @@ const PurchaseController = {
     }
   },
 
-  //For Fetching all Purchase
 
   fetchAllPurchase: async function (req, res) {
     try {
@@ -186,124 +209,164 @@ const PurchaseController = {
   },
 
   deletePurchase: async function (req, res) {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+    
     try {
-      const purchaseId = req.params.id;
-  
-      const existingPurchase = await PurchaseModel.findById(purchaseId).populate('entries.itemName');
-      if (!existingPurchase) {
-        return res.json({ success: false, message: "Purchase entry not found." });
-      }
-  
-      if (existingPurchase.type === "Debit") {
-        const ledger = await Ledger.findById(existingPurchase.ledger);
-        if (ledger) {
-          ledger.debitBalance += parseFloat(existingPurchase.totalamount);
-          await ledger.save();
-  
-          await PurchaseBillModel.deleteOne({ ref: purchaseId });
+        const purchaseId = req.params.id;
+        const existingPurchase = await PurchaseModel.findById(purchaseId).session(session);
+        if (!existingPurchase) throw new Error("Purchase not found.");
+
+        const ledger = await Ledger.findById(existingPurchase.ledger).session(session);
+        if (!ledger) throw new Error("Ledger not found.");
+
+        for (const entry of existingPurchase.entries) {
+            await Items.updateOne(
+                { _id: entry.itemName },
+                { $inc: { maximumStock: -entry.qty } },
+                { session }
+            );
         }
-      }
-  
-      for (const entry of existingPurchase.entries) {
-        const product = await Items.findById(entry.itemName._id);
-        if (product) {
-          await Items.updateOne(
-            { _id: entry.itemName._id },
-            { $inc: { maximumStock: -entry.qty } }
-          );
+
+        for (const bill of existingPurchase.billwise) {
+            if (bill.billType === "New Ref.") {
+                await PurchaseBillModel.findByIdAndDelete(bill.purchaseBill).session(session);
+            } else if (bill.billType === "Against Ref.") {
+              const purchaseBillId = bill.purchaseBill;
+
+              if (!purchaseBillId) throw new Error("Purchase Bill ID is required for Against Ref.");
+
+              const purchaseBill = await PurchaseBillModel.findById(purchaseBillId).session(session);
+              if (!purchaseBill) throw new Error("Purchase Bill not found.");
+
+              if (purchaseBill.type === "RP") {
+                  purchaseBill.dueAmount = parseFloat(purchaseBill.dueAmount) - amount;
+              } else {
+                  purchaseBill.dueAmount = parseFloat(purchaseBill.dueAmount) + amount;
+              }
+
+              await purchaseBill.save({ session });
+            }
+            ledger.debitBalance += bill.amount;
         }
-      }
-  
-      await PurchaseModel.findByIdAndDelete(purchaseId);
-  
-      return res.json({ success: true, message: "Purchase entry deleted successfully!" });
+
+        await ledger.save({ session });
+        await PurchaseModel.findByIdAndDelete(purchaseId).session(session);
+
+        await session.commitTransaction();
+        session.endSession();
+
+        return res.json({ success: true, message: "Purchase deleted successfully!" });
     } catch (ex) {
-      return res.json({ success: false, message: ex.message });
+        await session.abortTransaction();
+        session.endSession();
+        return res.json({ success: false, message: ex.message });
     }
-  },
+},
   
-  updatePurchase: async function (req, res) {
-    try {
+updatePurchase: async function (req, res) {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+  
+  try {
       const purchaseId = req.params.id;
-      const updatedPurchaseData = req.body;
-  
-      const existingPurchase = await PurchaseModel.findById(purchaseId).populate('entries.itemName');
-      if (!existingPurchase) {
-        return res.json({ success: false, message: "Purchase entry not found." });
-      }
-  
-      const duplicatePurchase = await PurchaseModel.findOne({
-        billNumber: updatedPurchaseData.billNumber,
-        _id: { $ne: purchaseId },
-      });
-      if (duplicatePurchase) {
-        return res.json({ success: false, message: "Bill number already exists." });
-      }
-  
-      const ledger = await Ledger.findById(existingPurchase.ledger);
-      if (!ledger) {
-        return res.json({ success: false, message: "Ledger not found." });
-      }
-  
-      if (existingPurchase.type === "Debit") {
-        ledger.debitBalance += parseFloat(existingPurchase.totalamount);
-        await ledger.save();
-  
-        await PurchaseBillModel.deleteOne({ ref: purchaseId });
-      }
-  
+      const updatedData = req.body;
+      
+      const existingPurchase = await PurchaseModel.findById(purchaseId).session(session);
+      if (!existingPurchase) throw new Error("Purchase not found.");
+
+      const ledger = await Ledger.findById(existingPurchase.ledger).session(session);
+      if (!ledger) throw new Error("Ledger not found.");
+
       for (const entry of existingPurchase.entries) {
-        const product = await Items.findById(entry.itemName._id);
-        if (product) {
           await Items.updateOne(
-            { _id: entry.itemName._id },
-            { $inc: { maximumStock: -entry.qty } }
+              { _id: entry.itemName },
+              { $inc: { maximumStock: -entry.qty } },
+              { session }
           );
-        }
       }
-  
-      updatedPurchaseData.totalamount = parseFloat(updatedPurchaseData.totalamount);
-      updatedPurchaseData.cashAmount = parseFloat(updatedPurchaseData.cashAmount);
-      updatedPurchaseData.dueAmount = parseFloat(updatedPurchaseData.dueAmount);
-  
-      await PurchaseModel.findByIdAndUpdate(purchaseId, updatedPurchaseData, { new: true });
-  
-      if (updatedPurchaseData.type === "Debit") {
-        ledger.debitBalance -= updatedPurchaseData.totalamount;
-        await ledger.save();
-  
-        const purchaseBillData = {
-          date: updatedPurchaseData.date,
-          companyCode: updatedPurchaseData.companyCode,
-          name: `RP# ${updatedPurchaseData.no}`,
-          type: 'RP',
-          ledger: updatedPurchaseData.ledger,
-          ref: purchaseId,
-          totalAmount: updatedPurchaseData.totalamount,
-          dueAmount: updatedPurchaseData.totalamount,
-        };
-  
-        const newPurchaseBill = new PurchaseBillModel(purchaseBillData);
-        await newPurchaseBill.save();
-      } else if (updatedPurchaseData.type === "Cash") {
-        updatedPurchaseData.cashAmount = updatedPurchaseData.totalamount;
+
+      for (const bill of existingPurchase.billwise) {
+          if (bill.billType === "New Ref.") {
+              await PurchaseBillModel.findByIdAndDelete(bill.purchaseBill).session(session);
+          } else if (bill.billType === "Against Ref.") {
+            const purchaseBillId = bill.purchaseBill;
+
+            if (!purchaseBillId) throw new Error("Purchase Bill ID is required for Against Ref.");
+
+            const purchaseBill = await PurchaseBillModel.findById(purchaseBillId).session(session);
+            if (!purchaseBill) throw new Error("Purchase Bill not found.");
+
+            if (purchaseBill.type === "RP") {
+                purchaseBill.dueAmount = parseFloat(purchaseBill.dueAmount) - amount;
+            } else {
+                purchaseBill.dueAmount = parseFloat(purchaseBill.dueAmount) + amount;
+            }
+
+            await purchaseBill.save({ session });
+          }
+          ledger.debitBalance += bill.amount;
       }
-  
-      for (const entry of updatedPurchaseData.entries) {
-        const product = await Items.findById(entry.itemName);
-        if (product) {
+
+      await ledger.save({ session });
+
+      const newPurchaseData = await PurchaseModel.findByIdAndUpdate(purchaseId, updatedData, { new: true, session });
+
+      for (const entry of updatedData.entries) {
           await Items.updateOne(
-            { _id: entry.itemName },
-            { $inc: { maximumStock: entry.qty }, price: entry.sellingPrice }
+              { _id: entry.itemName },
+              { $inc: { maximumStock: entry.qty } },
+              { session }
           );
-        }
       }
-  
-      return res.json({ success: true, message: "Purchase entry updated successfully!" });
-    } catch (ex) {
+
+      for (const bill of updatedData.billwise) {
+          if (bill.billType === "New Ref.") {
+              const newPurchaseBill = new PurchaseBillModel({
+                  date: updatedData.date,
+                  companyCode: updatedData.companyCode,
+                  name: bill.billName,
+                  type: "RP",
+                  ledger: updatedData.ledger,
+                  ref: newPurchaseData._id,
+                  totalAmount: bill.amount,
+                  dueAmount: bill.amount,
+                  dueDate: bill.dueDate,
+              });
+              await newPurchaseBill.save({ session });
+          } else if (bill.billType === "Against Ref.") {
+            const purchaseBillId = bill.purchaseBill;
+
+            if (!purchaseBillId) throw new Error("Purchase Bill ID is required for Against Ref.");
+
+            const purchaseBill = await PurchaseBillModel.findById(purchaseBillId).session(session);
+            if (!purchaseBill) throw new Error("Purchase Bill not found.");
+
+            if (purchaseBill.type === "RP") {
+                purchaseBill.dueAmount = parseFloat(purchaseBill.dueAmount) + amount;
+            } else {
+                purchaseBill.dueAmount = parseFloat(purchaseBill.dueAmount) - amount;
+            }
+
+            await purchaseBill.save({ session });
+          }
+          ledger.debitBalance -= bill.amount;
+      }
+
+      await ledger.save({ session });
+      await newPurchaseData.save({ session });
+
+      await session.commitTransaction();
+      session.endSession();
+
+      return res.json({ success: true, message: "Purchase updated successfully!", data: newPurchaseData });
+  } catch (ex) {
+      await session.abortTransaction();
+      session.endSession();
       return res.json({ success: false, message: ex.message });
-    }
-  },
+  }
+}
+
   
 };
 

@@ -1,14 +1,18 @@
 const SalesEntry = require("../models/sales_entry_model");
 const Items = require("../models/items_model");
 const Ledger = require("../models/ledger_model");
-const SalesBillModel = require("../models/sales_bills_model");
 const mongoose = require('mongoose');
 const fs = require("fs");
 const pdfdocument = require("pdfkit");
 const pdfTable = require("voilab-pdf-table");
+const SalesBillModel = require("../models/sales_bills_model");
+
 
 //For Creating Sales
 const createSales = async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
   try {
     const salesData = req.body;
 
@@ -22,210 +26,283 @@ const createSales = async (req, res) => {
 
     console.log(salesData);
 
+    const ledger = await Ledger.findById(ledgerID).session(session);
+    if (!ledger) throw new Error("Ledger not found.");
+
     if (saleType === "MULTI MODE") {
-      const ledger = await Ledger.findById(ledgerID);
       ledger.debitBalance += salesData.multimode[0].debit;
-      await ledger.save();
-    }
-
-    if (saleType === "DEBIT") {
-      const ledger = await Ledger.findById(ledgerID);
+    } else if (saleType === "DEBIT") {
       ledger.debitBalance += salesData.totalamount;
-      await ledger.save();
-    }
-
-    if (saleType === "CASH") {
+    } else if (saleType === "CASH") {
       newsalesData.cashAmount = salesData.totalamount;
     }
 
-    await newsalesData.save();
+    await ledger.save({ session });
 
+    // Update stock based on sales entries
     for (const entry of salesData.entries) {
       const salesId = entry.itemName;
       const quantity = entry.qty;
 
-      const sales = await Items.findById(salesId);
-
-      if (!sales) {
-        return res.json({
-          success: false,
-          message: "Item not found.",
-        });
-      }
+      const sales = await Items.findById(salesId).session(session);
+      if (!sales) throw new Error("Item not found.");
 
       await Items.updateOne(
         { _id: salesId },
-        { $inc: { maximumStock: -quantity } }
+        { $inc: { maximumStock: -quantity } },
+        { session }
       );
     }
 
-    if (saleType === "MULTI MODE" || saleType === "DEBIT") {
-      const dueAmount =
-        saleType === "MULTI MODE"
-          ? salesData.multimode[0]?.debit || 0
-          : salesData.totalamount;
+    for (const bill of salesData.billwise) {
+      const { billType, amount, salesBill } = bill;
+      const parsedAmount = parseFloat(amount);
 
-      const salesBillData = {
-        date: salesData.date,
-        companyCode: salesData.companyCode,
-        name: `BS# ${salesData.no}`,
-        type: "BS",
-        ledger: ledgerID,
-        ref: newsalesData._id, 
-        totalAmount: salesData.totalamount.toString(),
-        dueAmount: dueAmount.toString(),
-      };
+      if (billType === "Against Ref.") {
+        if (!salesBill) throw new Error("Sales Bill ID is required for Against Ref.");
 
-      const salesBill = new SalesBillModel(salesBillData);
-      await salesBill.save();
+        const billRef = await SalesBillModel.findById(salesBill).session(session);
+        if (!billRef) throw new Error("Sales Bill not found.");
+
+        if (billRef.type === "BS") {
+          billRef.dueAmount = parseFloat(billRef.dueAmount) + parsedAmount;
+        } else {
+          billRef.dueAmount = parseFloat(billRef.dueAmount) - parsedAmount;
+        }
+
+        await billRef.save({ session });
+      } else if (billType === "New Ref.") {
+        const salesBillData = {
+          date: salesData.date,
+          companyCode: salesData.companyCode,
+          name: bill.billName,
+          type: "BS",
+          ledger: ledgerID,
+          ref: newsalesData._id,
+          totalAmount: salesData.totalamount.toString(),
+          dueAmount: parsedAmount.toString(),
+          dueDate : bill.dueDate,
+        };
+
+        const newSalesBill = new SalesBillModel(salesBillData);
+        await newSalesBill.save({ session });
+
+        const billwiseEntry = newsalesData.billwise.find(
+          (b) => b.billName === bill.billName && b.billType === "New Ref." && b.amount === amount
+      );
+      if (billwiseEntry) {
+          billwiseEntry.salesBill = newSalesBill._id;
+      }
+      }
     }
 
-    // Response to the client
+    await newsalesData.save({ session });
+
+    await session.commitTransaction();
+    session.endSession();
+
     return res.json({
       success: true,
-      message: "Sales Created",
+      message: "Sales Created Successfully",
       data: newsalesData,
     });
   } catch (ex) {
+    await session.abortTransaction();
+    session.endSession();
     return res.json({ success: false, message: ex.message });
   }
 };
 
-
 const updateSales = async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
   try {
     const { id } = req.params;
-    const updatedData = req.body;
+    const updatedSalesData = req.body;
+    console.log(updatedSalesData);
 
-    // Find the existing sales entry
-    const existingSales = await SalesEntry.findById(id);
-    if (!existingSales) {
-      return res.status(404).json({ success: false, message: "Sales entry not found." });
-    }
+    const existingSales = await SalesEntry.findById(id).session(session);
+    if (!existingSales) throw new Error("Sales entry not found.");
 
-    // Reverse ledger updates
-    const existingLedger = await Ledger.findById(existingSales.party);
+    // Reverse ledger balance update
+    const ledger = await Ledger.findById(existingSales.party).session(session);
+    if (!ledger) throw new Error("Ledger not found.");
+
     if (existingSales.type === "MULTI MODE") {
-      existingLedger.debitBalance -= existingSales.multimode[0]?.debit || 0;
+      ledger.debitBalance -= existingSales.multimode[0].debit;
     } else if (existingSales.type === "DEBIT") {
-      existingLedger.debitBalance -= parseFloat(existingSales.totalamount);
+      ledger.debitBalance -= existingSales.totalamount;
     }
-    await existingLedger.save();
+
+    await ledger.save({ session });
+
+    // Reverse stock update
+    for (const entry of existingSales.entries) {
+      await Items.updateOne(
+        { _id: entry.itemName },
+        { $inc: { maximumStock: entry.qty } },
+        { session }
+      );
+    }
+
+    // Reverse Billwise adjustments
+    for (const bill of existingSales.billwise) {
+      const { billType, amount, salesBill } = bill;
+      const parsedAmount = parseFloat(amount);
+
+      if (billType === "Against Ref.") {
+        if (!salesBill) throw new Error("Sales Bill ID is required for Against Ref.");
+
+        const billRef = await SalesBillModel.findById(salesBill).session(session);
+        if (!billRef) throw new Error("Sales Bill not found.");
+
+        if (billRef.type === "BS") {
+          billRef.dueAmount -= parsedAmount;
+        } else {
+          billRef.dueAmount += parsedAmount;
+        }
+
+        await billRef.save({ session });
+      } else if (billType === "New Ref.") {
+        await SalesBillModel.findByIdAndDelete(salesBill).session(session);
+      }
+    }
+
+    // Apply new sales data
+    updatedSalesData.totalamount = parseFloat(updatedSalesData.totalamount);
+    updatedSalesData.cashAmount = parseFloat(updatedSalesData.cashAmount);
+    updatedSalesData.dueAmount = parseFloat(updatedSalesData.dueAmount);
+
+    if (updatedSalesData.type === "MULTI MODE") {
+      ledger.debitBalance += updatedSalesData.multimode[0].debit;
+    } else if (updatedSalesData.type === "DEBIT") {
+      ledger.debitBalance += updatedSalesData.totalamount;
+    }
+
+    await ledger.save({ session });
+
+    for (const entry of updatedSalesData.entries) {
+      await Items.updateOne(
+        { _id: entry.itemName },
+        { $inc: { maximumStock: -entry.qty } },
+        { session }
+      );
+    }
+
+    for (const bill of updatedSalesData.billwise) {
+      const { billType, amount, salesBill } = bill;
+      const parsedAmount = parseFloat(amount);
+
+      if (billType === "Against Ref.") {
+        const billRef = await SalesBillModel.findById(salesBill).session(session);
+        if (!billRef) throw new Error("Sales Bill not found.");
+
+        if (billRef.type === "BS") {
+          billRef.dueAmount += parsedAmount;
+        } else {
+          billRef.dueAmount -= parsedAmount;
+        }
+
+        await billRef.save({ session });
+      } else if (billType === "New Ref.") {
+        const newSalesBill = new SalesBillModel({
+          date: updatedSalesData.date,
+          companyCode: updatedSalesData.companyCode,
+          name: bill.billName,
+          type: "BS",
+          ledger: updatedSalesData.party,
+          ref: id,
+          totalAmount: updatedSalesData.totalamount.toString(),
+          dueAmount: parsedAmount.toString(),
+          dueDate: bill.dueDate,
+        });
+
+        await newSalesBill.save({ session });
+
+        const billwiseEntry = updatedSalesData.billwise.find(
+          (b) => b.billName === bill.billName && b.billType === "New Ref." && b.amount === amount
+        );
+        if (billwiseEntry) {
+          billwiseEntry.salesBill = newSalesBill._id;
+        }
+      }
+    }
+
+    await SalesEntry.findByIdAndUpdate(id, updatedSalesData, { session });
+
+    await session.commitTransaction();
+    session.endSession();
+
+    return res.json({ success: true, message: "Sales updated successfully" });
+  } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
+    return res.json({ success: false, message: error.message });
+  }
+};
+
+const deleteSales = async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    const { id } = req.params;
+    const existingSales = await SalesEntry.findById(id).session(session);
+    if (!existingSales) throw new Error("Sales entry not found.");
+
+    const ledger = await Ledger.findById(existingSales.party).session(session);
+    if (!ledger) throw new Error("Ledger not found.");
+
+    // Reverse ledger balance changes
+    if (existingSales.type === "MULTI MODE") {
+      ledger.debitBalance -= existingSales.multimode[0].debit;
+    } else if (existingSales.type === "DEBIT") {
+      ledger.debitBalance -= existingSales.totalamount;
+    }
+    await ledger.save({ session });
 
     // Reverse stock changes
     for (const entry of existingSales.entries) {
       await Items.updateOne(
         { _id: entry.itemName },
-        { $inc: { maximumStock: entry.qty } }
+        { $inc: { maximumStock: entry.qty } },
+        { session }
       );
     }
 
-    // Reverse sales bill entry
-    await SalesBillModel.deleteOne({ ref: existingSales._id });
-
-    // Apply updates
-    updatedData.totalamount = parseFloat(updatedData.totalamount);
-    updatedData.cashAmount = parseFloat(updatedData.cashAmount);
-    updatedData.dueAmount = parseFloat(updatedData.dueAmount);
-
-    if (updatedData.type === "MULTI MODE") {
-      const updatedLedger = await Ledger.findById(updatedData.party);
-      updatedLedger.debitBalance += updatedData.multimode[0]?.debit || 0;
-      await updatedLedger.save();
-    } else if (updatedData.type === "DEBIT") {
-      const updatedLedger = await Ledger.findById(updatedData.party);
-      updatedLedger.debitBalance += updatedData.totalamount;
-      await updatedLedger.save();
-    } else if (updatedData.type === "CASH") {
-      updatedData.cashAmount = updatedData.totalamount;
+    // Reverse billwise adjustments
+    for (const bill of existingSales.billwise) {
+      if (bill.billType === "Against Ref.") {
+        const billRef = await SalesBillModel.findById(bill.salesBill).session(session);
+        if (billRef) {
+          if (billRef.type === "BS") {
+            billRef.dueAmount -= parseFloat(bill.amount);
+          } else {
+            billRef.dueAmount += parseFloat(bill.amount);
+          }
+          await billRef.save({ session });
+        }
+      } else if (bill.billType === "New Ref.") {
+        await SalesBillModel.findByIdAndDelete(bill.salesBill).session(session);
+      }
     }
 
-    // Update stock for new entries
-    for (const entry of updatedData.entries) {
-      await Items.updateOne(
-        { _id: entry.itemName },
-        { $inc: { maximumStock: -entry.qty } }
-      );
-    }
-
-    // Add updated sales bill
-    if (updatedData.type === "MULTI MODE" || updatedData.type === "DEBIT") {
-      const dueAmount =
-        updatedData.type === "MULTI MODE"
-          ? updatedData.multimode[0]?.debit || 0
-          : updatedData.totalamount;
-
-      const salesBillData = {
-        date: updatedData.date,
-        companyCode: updatedData.companyCode,
-        name: `BS# ${updatedData.no}`,
-        type: "BS",
-        ledger: updatedData.party,
-        ref: id,
-        totalAmount: updatedData.totalamount.toString(),
-        dueAmount: dueAmount.toString(),
-      };
-
-      const salesBill = new SalesBillModel(salesBillData);
-      await salesBill.save();
-    }
-
-    const updatedSales = await SalesEntry.findByIdAndUpdate(id, updatedData, {
-      new: true,
-    });
+    await SalesEntry.findByIdAndDelete(id).session(session);
+    
+    await session.commitTransaction();
+    session.endSession();
 
     return res.json({
       success: true,
-      message: "Sales updated successfully.",
-      data: updatedSales,
+      message: "Sales Deleted Successfully",
     });
   } catch (ex) {
+    await session.abortTransaction();
+    session.endSession();
     return res.json({ success: false, message: ex.message });
   }
 };
-
-const deleteSales = async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    // Find the sales entry
-    const salesEntry = await SalesEntry.findById(id);
-    if (!salesEntry) {
-      return res.status(404).json({ success: false, message: "Sales entry not found." });
-    }
-
-    // Reverse ledger updates
-    const ledger = await Ledger.findById(salesEntry.party);
-    if (salesEntry.type === "MULTI MODE") {
-      ledger.debitBalance -= salesEntry.multimode[0]?.debit || 0;
-    } else if (salesEntry.type === "DEBIT") {
-      ledger.debitBalance -= parseFloat(salesEntry.totalamount);
-    }
-    await ledger.save();
-
-    // Reverse stock changes
-    for (const entry of salesEntry.entries) {
-      await Items.updateOne(
-        { _id: entry.itemName },
-        { $inc: { maximumStock: entry.qty } }
-      );
-    }
-
-    // Reverse sales bill entry
-    await SalesBillModel.deleteOne({ ref: id });
-
-    // Delete the sales entry
-    await SalesEntry.findByIdAndDelete(id);
-
-    return res.json({
-      success: true,
-      message: "Sales entry deleted successfully.",
-    });
-  } catch (ex) {
-    return res.json({ success: false, message: ex.message });
-  }
-};
-
 
 
 //For Deleting Sales
@@ -271,7 +348,7 @@ const fetchSalesByBillNumber = async (req, res) => {
     const dcNo = req.params.billNumber;
 
     const fetchSalesByBillNumber = await SalesEntry.findOne({
-       dcNo: dcNo
+      dcNo: dcNo
     });
 
     if (!fetchSalesByBillNumber) {
@@ -281,7 +358,7 @@ const fetchSalesByBillNumber = async (req, res) => {
       });
     }
 
-    return res.json({success: true,data: fetchSalesByBillNumber});
+    return res.json({ success: true, data: fetchSalesByBillNumber });
   } catch (ex) {
     res.json({ success: false, message: ex });
   }
@@ -319,7 +396,7 @@ const fetchSalesByItemName = async (req, res) => {
       entries: {
         $elemMatch: { itemName: itemNameId },
       },
-    }); 
+    });
 
     res.status(200).json(salesEntries);
   } catch (error) {

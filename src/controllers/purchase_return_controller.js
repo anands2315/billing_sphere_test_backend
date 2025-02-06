@@ -7,75 +7,7 @@ const PurchaseBillModel = require("../models/purchase_bills_models");
 
 const PurchaseReturnController = {
 
-    // createPurchaseReturn: async function (req, res) {
-    //     const session = await mongoose.startSession();
-    //     session.startTransaction();
-
-    //     try {
-    //         const purchaseReturnData = req.body;
-    //         purchaseReturnData.totalAmount = parseFloat(purchaseReturnData.totalAmount);
-    //         purchaseReturnData.cashAmount = parseFloat(purchaseReturnData.cashAmount);
-
-    //         const newPurchaseReturnData = new PurchaseReturnModel(purchaseReturnData);
-    //         const ledgerID = purchaseReturnData.ledger;
-    //         const purchaseType = purchaseReturnData.type;
-
-    //         if (purchaseType === "Debit") {
-    //             const ledger = await Ledger.findById(ledgerID).session(session);
-    //             if (!ledger) throw new Error("Ledger not found.");
-
-    //             ledger.debitBalance += purchaseReturnData.totalAmount;
-    //             await ledger.save({ session });
-    //         }
-
-    //         if (purchaseType === "Cash") {
-    //             newPurchaseReturnData.cashAmount = purchaseReturnData.totalAmount;
-    //         }
-
-    //         const existingPurchase = await PurchaseReturnModel.findOne({ billNumber: req.body.billNumber }).session(session);
-    //         if (existingPurchase) throw new Error("Bill No already exists.");
-
-    //         await newPurchaseReturnData.save({ session });
-
-    //         for (const entry of purchaseReturnData.entries) {
-    //             const productId = entry.itemName;
-    //             const quantity = entry.qty;
-    //             const sellingPrice = entry.sellingPrice;
-
-    //             const product = await Items.findById(productId).session(session);
-    //             if (!product) throw new Error("Product not found.");
-
-    //             product.maximumStock -= quantity;
-    //             product.price = sellingPrice;
-    //             await product.save({ session });
-    //         }
-
-    //         for (const bill of purchaseReturnData.billwise) {
-    //             const purchaseId = bill.purchase;
-    //             const amount = bill.amount;
-
-    //             const purchase = await Purchase.findById(purchaseId).session(session);
-    //             if (!purchase) throw new Error("Purchase not found.");
-
-    //             purchase.dueAmount -= amount;
-    //             await purchase.save({ session });
-    //         }
-
-    //         await session.commitTransaction();
-    //         session.endSession();
-
-    //         return res.json({
-    //             success: true,
-    //             message: "Purchase Return entry created successfully!",
-    //             data: newPurchaseReturnData,
-    //         });
-    //     } catch (ex) {
-    //         await session.abortTransaction();
-    //         session.endSession();
-    //         return res.json({ success: false, message: ex.message });
-    //     }
-    // },
-
+    
     createPurchaseReturn: async function (req, res) {
         const session = await mongoose.startSession();
         session.startTransaction();
@@ -127,6 +59,7 @@ const PurchaseReturnController = {
                             ref: newPurchaseReturnData._id,
                             totalAmount: amount,
                             dueAmount: amount,
+                            dueDate : bill.dueDate,
                         });
 
                         await newPurchaseBill.save({ session });
@@ -322,6 +255,7 @@ const PurchaseReturnController = {
                         ref: existingPurchaseReturn._id,
                         totalAmount: amount,
                         dueAmount: amount,
+                        dueDate : bill.dueDate,
                     });
 
                     await newPurchaseBill.save({ session });

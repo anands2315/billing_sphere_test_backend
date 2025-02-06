@@ -77,6 +77,35 @@ const purchaseSchema = new mongoose.Schema({
       },
     },
   ],
+  billwise: [
+    {
+      date: {
+        type: String,
+        required: true,
+      },
+      purchaseBill: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "PurchaseBill",
+        required: false,
+      },
+      billType: {
+        type: String,
+        required: true,
+      },
+      billName: {
+        type: String,
+        required: false,
+      },
+      amount: {
+        type: Number,
+        required: false,
+      },
+      dueDate: {
+        type: String,
+        required: true,
+      },
+    },
+  ],
   sundry: [
     {
       sundryName: {

@@ -118,7 +118,12 @@ const PurchseReturnSchema = new mongoose.Schema({
                 type: Number,
                 required: true,
             },
+            dueDate: {
+                type: String,
+                required: true,
+              },
         },
+        
     ],
     sundry: [
         {

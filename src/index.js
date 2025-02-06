@@ -38,6 +38,7 @@ mongoose
     // "mongodb://fdsupermartbd:fuerteretail1313@35.154.157.177:27017/?authSource=test"
 
     "mongodb+srv://anandsinghfuerte:anand2315@cluster0.b2kwc.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
+   
   )
   .then(() => {
     console.log("Connected to database");
@@ -106,9 +107,15 @@ app.use("/api/user", UserRoutes);
 const ProductCategoryRoutes = require("./routes/product_category_routes");
 app.use("/api/productCategory", ProductCategoryRoutes);
 
+const LedgerStatmentRoutes = require("./routes/ledger_statement_routes");
+app.use("/api/ledger-statment", LedgerStatmentRoutes);
+
 //Routes for hsn code
 const HsnCodeRoutes = require("./routes/hsn_code_routes");
 app.use("/api/hsnCode", HsnCodeRoutes);
+//Routes for Ledger Deshboard
+const LedgerDeshboardRoutes = require("./routes/ledger_dashboard_routes");
+app.use("/api/ledger-deshboard", LedgerDeshboardRoutes);
 //Routes for measurement limit
 const MeasurementLimitRoutes = require("./routes/measurement_limit_routes");
 app.use("/api/measurementLimit", MeasurementLimitRoutes);
@@ -118,6 +125,10 @@ app.use("/api/store", StoreLocationRoutes);
 //Routes for tax
 const TaxRoutes = require("./routes/tax_routes");
 app.use("/api/tax", TaxRoutes);
+// voucher register
+const VoucherRegisterRoutes = require("./routes/voucher_register_routes");
+app.use("/api/voucher-register", VoucherRegisterRoutes);
+
 //Routes for secondary unit
 const SecondaryUnitRoutes = require("./routes/secondary_unit_routes");
 app.use("/api/secondaryUnit", SecondaryUnitRoutes);

@@ -107,7 +107,35 @@ const SalesEntrySchema = new mongoose.Schema({
       },
     },
   ],
-
+  billwise: [
+    {
+      date: {
+        type: String,
+        required: true,
+      },
+      salesBill: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "salesBill",
+        required: false,
+      },
+      billType: {
+        type: String,
+        required: true,
+      },
+      billName: {
+        type: String,
+        required: false,
+      },
+      amount: {
+        type: Number,
+        required: false,
+      },
+      dueDate: {
+        type: String,
+        required: true,
+      },
+    },
+  ],
 
   sundry: [
     {
