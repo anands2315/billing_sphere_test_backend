@@ -146,9 +146,9 @@ const ReceiptVoucherSchema = new mongoose.Schema({
                 type: String,
                 required: true,
             },
-            salesBill: {
+            Bill: {
                 type: mongoose.Schema.Types.ObjectId,
-                ref: "salesBill",
+                // ref: "salesBill",
                 required: false,
             },
             billType: {

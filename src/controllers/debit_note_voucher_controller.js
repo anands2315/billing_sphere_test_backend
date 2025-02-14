@@ -224,6 +224,7 @@ async function createNewBill({
       ref: journalVch._id,
       totalAmount: parsedAmount,
       dueAmount: parsedAmount,
+      dueDate: bill.dueDate,
     });
   } else if (ledgerGroupName === "Customers") {
     newBillModel = new SalesBillModel({
@@ -235,6 +236,7 @@ async function createNewBill({
       ref: journalVch._id,
       totalAmount: parsedAmount,
       dueAmount: parsedAmount,
+      dueDate: bill.dueDate,
     });
   } else {
     throw new Error("Invalid ledger group name for New Ref.");

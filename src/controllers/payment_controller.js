@@ -35,13 +35,13 @@ const PaymentController = {
       console.log("Ledgers updated.");
 
       for (const bill of paymentData.billwise) {
-        const { billType, amount, purchaseBill } = bill;
+        const { billType, amount, Bill } = bill;
         const parsedAmount = parseFloat(amount);
 
         if (billType === "Against Ref.") {
-          if (!purchaseBill) throw new Error("Purchase Bill ID is required for Against Ref.");
+          if (!Bill) throw new Error("Purchase Bill ID is required for Against Ref.");
 
-          const billEntry = await PurchaseBill.findById(purchaseBill).session(session);
+          const billEntry = await PurchaseBill.findById(Bill).session(session);
           if (!billEntry) throw new Error("Purchase Bill not found.");
 
           if (billEntry.type === "RP") {
@@ -70,7 +70,7 @@ const PaymentController = {
             (b) => b.billName === bill.billName && b.billType === "New Ref." && b.amount === amount
           );
           if (billwiseEntry) {
-            billwiseEntry.purchaseBill = newBill._id;
+            billwiseEntry.Bill = newBill._id;
           }
         }
       }
@@ -154,30 +154,30 @@ const PaymentController = {
 
       // Reverse previous billwise adjustments
       for (const bill of existingPayment.billwise) {
-        const { billType, amount, purchaseBill } = bill;
+        const { billType, amount, Bill } = bill;
         const parsedAmount = parseFloat(amount);
 
-        if (billType === "Against Ref." && purchaseBill) {
-          const billEntry = await PurchaseBill.findById(purchaseBill).session(session);
+        if (billType === "Against Ref." && Bill) {
+          const billEntry = await PurchaseBill.findById(Bill).session(session);
           if (!billEntry) {
-            console.error("Purchase Bill not found for ID:", purchaseBill);
+            console.error("Purchase Bill not found for ID:", Bill);
             throw new Error("Purchase Bill not found.");
           }
           if (billEntry.type === "RP") {
-            console.log(`Reversing RP due amount ${parsedAmount} for bill ID ${purchaseBill}`);
+            console.log(`Reversing RP due amount ${parsedAmount} for bill ID ${Bill}`);
 
             billEntry.dueAmount = parseFloat(billEntry.dueAmount) + parsedAmount;
           } else {
-            console.log(`Reversing non-RP due amount ${parsedAmount} for bill ID ${purchaseBill}`);
+            console.log(`Reversing non-RP due amount ${parsedAmount} for bill ID ${Bill}`);
 
             billEntry.dueAmount = parseFloat(billEntry.dueAmount) - parsedAmount;
           }
 
           await billEntry.save({ session });
-        } else if (billType === "New Ref." && purchaseBill) {
-          console.log("Deleting new reference bill for ID:", purchaseBill);
+        } else if (billType === "New Ref." && Bill) {
+          console.log("Deleting new reference bill for ID:", Bill);
 
-          await PurchaseBill.findByIdAndDelete(purchaseBill).session(session);
+          await PurchaseBill.findByIdAndDelete(Bill).session(session);
         }
       }
       console.log("Previous billwise adjustments reversed successfully.");
@@ -205,26 +205,26 @@ const PaymentController = {
 
 
       for (const bill of newPaymentData.billwise) {
-        const { billType, amount, purchaseBill } = bill;
+        const { billType, amount, Bill } = bill;
         const parsedAmount = parseFloat(amount);
 
         if (billType === "Against Ref.") {
-          if (!purchaseBill) {
+          if (!Bill) {
             console.error("Purchase Bill ID is missing for Against Ref.");
             throw new Error("Purchase Bill ID is required for Against Ref.");
           }
-          const billEntry = await PurchaseBill.findById(purchaseBill).session(session);
+          const billEntry = await PurchaseBill.findById(Bill).session(session);
           if (!billEntry) {
-            console.error("Purchase Bill not found for ID:", purchaseBill);
+            console.error("Purchase Bill not found for ID:", Bill);
             throw new Error("Purchase Bill not found.");
           }
 
           if (billEntry.type === "RP") {
-            console.log(`Adjusting RP due amount ${parsedAmount} for bill ID ${purchaseBill}`);
+            console.log(`Adjusting RP due amount ${parsedAmount} for bill ID ${Bill}`);
 
             billEntry.dueAmount = parseFloat(billEntry.dueAmount) - parsedAmount;
           } else {
-            console.log(`Adjusting non-RP due amount ${parsedAmount} for bill ID ${purchaseBill}`);
+            console.log(`Adjusting non-RP due amount ${parsedAmount} for bill ID ${Bill}`);
 
             billEntry.dueAmount = parseFloat(billEntry.dueAmount) + parsedAmount;
           }
@@ -250,7 +250,7 @@ const PaymentController = {
             (b) => b.billName === bill.billName && b.billType === "New Ref." && b.amount === amount
           );
           if (billwiseEntry) {
-            billwiseEntry.purchaseBill = newBill._id;
+            billwiseEntry.Bill = newBill._id;
           }
         }
       }
@@ -311,11 +311,11 @@ const PaymentController = {
 
       // Reverse billwise adjustments
       for (const bill of existingPayment.billwise) {
-        const { billType, amount, purchaseBill } = bill;
+        const { billType, amount, Bill } = bill;
         const parsedAmount = parseFloat(amount);
 
-        if (billType === "Against Ref." && purchaseBill) {
-          const billEntry = await PurchaseBill.findById(purchaseBill).session(session);
+        if (billType === "Against Ref." && Bill) {
+          const billEntry = await PurchaseBill.findById(Bill).session(session);
           if (!billEntry) throw new Error("Purchase Bill not found.");
 
           if (billEntry.type === "RP") {
@@ -325,8 +325,8 @@ const PaymentController = {
           }
 
           await billEntry.save({ session });
-        } else if (billType === "New Ref." && purchaseBill) {
-          await PurchaseBill.findByIdAndDelete(purchaseBill).session(session);
+        } else if (billType === "New Ref." && Bill) {
+          await PurchaseBill.findByIdAndDelete(Bill).session(session);
         }
       }
 

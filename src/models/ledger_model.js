@@ -68,7 +68,6 @@ const ledgerSchema = new mongoose.Schema({
   },
   ledgerCode: {
     type: Number,
-    required: [true, "Please provide ledger code."],
   },
   mailingName: {
     type: String,
@@ -84,11 +83,9 @@ const ledgerSchema = new mongoose.Schema({
   },
   region: {
     type: String,
-    required: [true, "Please provide region details for this ledger."],
   },
   state: {
     type: String,
-    required: [true, "Please provide a matching state for this ledger."],
   },
   pincode: {
     type: Number,

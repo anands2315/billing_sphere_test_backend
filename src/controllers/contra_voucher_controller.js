@@ -65,6 +65,7 @@ async function createNewBill({
     ref: contraVch._id,
     totalAmount: parsedAmount,
     dueAmount: parsedAmount,
+    dueDate: bill.dueDate,
   });
   await newBillModel.save({ session });
   return newBillModel._id;

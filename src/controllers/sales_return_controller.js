@@ -55,23 +55,23 @@ const SalesReturnController = {
                             (b) => b.billName === bill.billName && b.billType === "New Ref." && b.amount === amount
                         );
                         if (billwiseEntry) {
-                            billwiseEntry.salesBill = newSalesBill._id;
+                            billwiseEntry.Bill = newSalesBill._id;
                         }
                     } else if (billType === "Against Ref.") {
-                        const salesBillId = bill.salesBill;
+                        const salesBillId = bill.Bill;
     
                         if (!salesBillId) throw new Error("Sales Bill ID is required for Against Ref.");
     
-                        const salesBill = await SalesBillModel.findById(salesBillId).session(session);
-                        if (!salesBill) throw new Error("Sales Bill not found.");
+                        const Bill = await SalesBillModel.findById(salesBillId).session(session);
+                        if (!Bill) throw new Error("Sales Bill not found.");
     
-                        if (salesBill.type === "BS") {
-                            salesBill.dueAmount = parseFloat(salesBill.dueAmount) - amount;
+                        if (Bill.type === "BS") {
+                            Bill.dueAmount = parseFloat(Bill.dueAmount) - amount;
                         } else {
-                            salesBill.dueAmount = parseFloat(salesBill.dueAmount) + amount;
+                            Bill.dueAmount = parseFloat(Bill.dueAmount) + amount;
                         }
     
-                        await salesBill.save({ session });
+                        await Bill.save({ session });
                     }
                 }
                 ledger.debitBalance -= parseFloat(salesReturnData.totalAmount);
@@ -168,18 +168,18 @@ const SalesReturnController = {
                     const amount = bill.amount;
     
                     if (bill.billType === "Against Ref.") {
-                        const salesBill = await SalesBillModel.findById(bill.salesBill).session(session);
-                        if (!salesBill) throw new Error("Sales Bill not found.");
+                        const Bill = await SalesBillModel.findById(bill.Bill).session(session);
+                        if (!Bill) throw new Error("Sales Bill not found.");
     
-                        if (salesBill.type === "BS") {
-                            salesBill.dueAmount = parseFloat(salesBill.dueAmount) + parseFloat(amount); 
+                        if (Bill.type === "BS") {
+                            Bill.dueAmount = parseFloat(Bill.dueAmount) + parseFloat(amount); 
                         } else {
-                            salesBill.dueAmount = parseFloat(salesBill.dueAmount) + parseFloat(amount); 
+                            Bill.dueAmount = parseFloat(Bill.dueAmount) + parseFloat(amount); 
                         }
     
-                        await salesBill.save({ session });
+                        await Bill.save({ session });
                     } else if (bill.billType === "New Ref.") {
-                        await SalesBillModel.deleteOne({ _id: bill.salesBill }, { session });
+                        await SalesBillModel.deleteOne({ _id: bill.Bill }, { session });
                     }
                 }
     
@@ -223,18 +223,18 @@ const SalesReturnController = {
                         });
     
                         await newSalesBill.save({ session });
-                        bill.salesBill = newSalesBill._id;
+                        bill.Bill = newSalesBill._id;
                     } else if (bill.billType === "Against Ref.") {
-                        const salesBill = await SalesBillModel.findById(bill.salesBill).session(session);
-                        if (!salesBill) throw new Error("Sales Bill not found.");
+                        const Bill = await SalesBillModel.findById(bill.Bill).session(session);
+                        if (!Bill) throw new Error("Sales Bill not found.");
     
-                        if (salesBill.type === "BS") {
-                            salesBill.dueAmount = parseFloat(salesBill.dueAmount) - parseFloat(amount); 
+                        if (Bill.type === "BS") {
+                            Bill.dueAmount = parseFloat(Bill.dueAmount) - parseFloat(amount); 
                         } else {
-                            salesBill.dueAmount = parseFloat(salesBill.dueAmount) + parseFloat(amount); 
+                            Bill.dueAmount = parseFloat(Bill.dueAmount) + parseFloat(amount); 
                         }
     
-                        await salesBill.save({ session });
+                        await Bill.save({ session });
                     }
                 }
     
@@ -293,18 +293,18 @@ const SalesReturnController = {
                     const amount = bill.amount;
     
                     if (bill.billType === "Against Ref.") {
-                        const salesBill = await SalesBillModel.findById(bill.salesBill).session(session);
-                        if (!salesBill) throw new Error("Sales Bill not found.");
+                        const Bill = await SalesBillModel.findById(bill.Bill).session(session);
+                        if (!Bill) throw new Error("Sales Bill not found.");
     
-                        if (salesBill.type === "BS") {
-                            salesBill.dueAmount = parseFloat(salesBill.dueAmount) + parseFloat(amount); 
+                        if (Bill.type === "BS") {
+                            Bill.dueAmount = parseFloat(Bill.dueAmount) + parseFloat(amount); 
                         } else {
-                            salesBill.dueAmount = parseFloat(salesBill.dueAmount) - parseFloat(amount); 
+                            Bill.dueAmount = parseFloat(Bill.dueAmount) - parseFloat(amount); 
                         }
     
-                        await salesBill.save({ session });
+                        await Bill.save({ session });
                     } else if (bill.billType === "New Ref.") {
-                        await SalesBillModel.deleteOne({ _id: bill.salesBill }, { session });
+                        await SalesBillModel.deleteOne({ _id: bill.Bill }, { session });
                     }
                 }
     

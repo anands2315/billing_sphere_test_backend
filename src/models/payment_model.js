@@ -44,9 +44,9 @@ const PaymentSchema = new mongoose.Schema({
                  type: String,
                  required: true,
              },
-             purchaseBill: {
+             Bill: {
                  type: mongoose.Schema.Types.ObjectId,
-                 ref: "PurchaseBill",
+                //  ref: "PurchaseBill",
                  required: false,
              },
              billType: {

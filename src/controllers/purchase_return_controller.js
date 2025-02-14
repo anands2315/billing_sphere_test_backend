@@ -68,23 +68,23 @@ const PurchaseReturnController = {
                             (b) => b.billName === bill.billName && b.billType === "New Ref." && b.amount === amount
                         );
                         if (billwiseEntry) {
-                            billwiseEntry.purchaseBill = newPurchaseBill._id;
+                            billwiseEntry.Bill = newPurchaseBill._id;
                         }
                     } else if (billType === "Against Ref.") {
-                        const purchaseBillId = bill.purchaseBill;
+                        const purchaseBillId = bill.Bill;
 
                         if (!purchaseBillId) throw new Error("Purchase Bill ID is required for Against Ref.");
 
-                        const purchaseBill = await PurchaseBillModel.findById(purchaseBillId).session(session);
-                        if (!purchaseBill) throw new Error("Purchase Bill not found.");
+                        const Bill = await PurchaseBillModel.findById(purchaseBillId).session(session);
+                        if (!Bill) throw new Error("Purchase Bill not found.");
 
-                        if (purchaseBill.type === "RP") {
-                            purchaseBill.dueAmount = parseFloat(purchaseBill.dueAmount) - amount;
+                        if (Bill.type === "RP") {
+                            Bill.dueAmount = parseFloat(Bill.dueAmount) - amount;
                         } else {
-                            purchaseBill.dueAmount = parseFloat(purchaseBill.dueAmount) + amount;
+                            Bill.dueAmount = parseFloat(Bill.dueAmount) + amount;
                         }
 
-                        await purchaseBill.save({ session });
+                        await Bill.save({ session });
                     }
 
                     ledger.debitBalance += amount;
@@ -193,19 +193,19 @@ const PurchaseReturnController = {
                 const amount = bill.amount;
 
                 if (billType === "New Ref.") {
-                    const purchaseBill = await PurchaseBillModel.findById(bill.purchaseBill).session(session);
-                    if (purchaseBill) {
-                        await PurchaseBillModel.deleteOne({ _id: bill.purchaseBill }).session(session);
+                    const Bill = await PurchaseBillModel.findById(bill.Bill).session(session);
+                    if (Bill) {
+                        await PurchaseBillModel.deleteOne({ _id: bill.Bill }).session(session);
                     }
                 } else if (billType === "Against Ref.") {
-                    const purchaseBill = await PurchaseBillModel.findById(bill.purchaseBill).session(session);
-                    if (purchaseBill) {
-                        if (purchaseBill.type === "RP") {
-                            purchaseBill.dueAmount = parseFloat(purchaseBill.dueAmount) + parseFloat(amount);
+                    const Bill = await PurchaseBillModel.findById(bill.Bill).session(session);
+                    if (Bill) {
+                        if (Bill.type === "RP") {
+                            Bill.dueAmount = parseFloat(Bill.dueAmount) + parseFloat(amount);
                         } else {
-                            purchaseBill.dueAmount = parseFloat(purchaseBill.dueAmount) - parseFloat(amount);
+                            Bill.dueAmount = parseFloat(Bill.dueAmount) - parseFloat(amount);
                         }
-                        await purchaseBill.save({ session });
+                        await Bill.save({ session });
                     }
                 }
             }
@@ -264,24 +264,24 @@ const PurchaseReturnController = {
                         (b) => b.billName === bill.billName && b.billType === "New Ref." && b.amount === amount
                     );
                     if (billwiseEntry) {
-                        billwiseEntry.purchaseBill = newPurchaseBill._id;
+                        billwiseEntry.Bill = newPurchaseBill._id;
                     }
 
                    
                 } else if (billType === "Against Ref.") {
-                    const purchaseBillId = bill.purchaseBill;
+                    const purchaseBillId = bill.Bill;
 
                     if (!purchaseBillId) throw new Error("Purchase Bill ID is required for Against Ref.");
 
-                    const purchaseBill = await PurchaseBillModel.findById(purchaseBillId).session(session);
-                    if (!purchaseBill) throw new Error("Purchase Bill not found.");
+                    const Bill = await PurchaseBillModel.findById(purchaseBillId).session(session);
+                    if (!Bill) throw new Error("Purchase Bill not found.");
 
-                    if (purchaseBill.type === "RP") {
-                        purchaseBill.dueAmount = parseFloat(purchaseBill.dueAmount) - parseFloat(amount);
+                    if (Bill.type === "RP") {
+                        Bill.dueAmount = parseFloat(Bill.dueAmount) - parseFloat(amount);
                     } else {
-                        purchaseBill.dueAmount = parseFloat(purchaseBill.dueAmount) + parseFloat(amount);
+                        Bill.dueAmount = parseFloat(Bill.dueAmount) + parseFloat(amount);
                     }
-                    await purchaseBill.save({ session });
+                    await Bill.save({ session });
                 }
             }
 
@@ -343,19 +343,19 @@ const PurchaseReturnController = {
                 const amount = bill.amount;
 
                 if (billType === "New Ref.") {
-                    const purchaseBill = await PurchaseBillModel.findById(bill.purchaseBill).session(session);
-                    if (purchaseBill) {
-                        await PurchaseBillModel.deleteOne({ _id: bill.purchaseBill }).session(session);
+                    const Bill = await PurchaseBillModel.findById(bill.Bill).session(session);
+                    if (Bill) {
+                        await PurchaseBillModel.deleteOne({ _id: bill.Bill }).session(session);
                     }
                 } else if (billType === "Against Ref.") {
-                    const purchaseBill = await PurchaseBillModel.findById(bill.purchaseBill).session(session);
-                    if (purchaseBill) {
-                        if (purchaseBill.type === "RP") {
-                            purchaseBill.dueAmount = parseFloat(purchaseBill.dueAmount) + parseFloat(amount);
+                    const Bill = await PurchaseBillModel.findById(bill.Bill).session(session);
+                    if (Bill) {
+                        if (Bill.type === "RP") {
+                            Bill.dueAmount = parseFloat(Bill.dueAmount) + parseFloat(amount);
                         } else {
-                            purchaseBill.dueAmount = parseFloat(purchaseBill.dueAmount) - parseFloat(amount);
+                            Bill.dueAmount = parseFloat(Bill.dueAmount) - parseFloat(amount);
                         }
-                        await purchaseBill.save({ session });
+                        await Bill.save({ session });
                     }
                 }
             }

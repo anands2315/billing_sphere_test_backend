@@ -45,13 +45,13 @@ const ReceiptVoucherController = {
             console.log("3");
 
             for (const bill of receiptData.billwise) {
-                const { billType, amount, salesBill } = bill;
+                const { billType, amount, Bill } = bill;
                 const parsedAmount = parseFloat(amount);
 
                 if (billType === "Against Ref.") {
-                    if (!salesBill) throw new Error("Sales Bill ID is required for Against Ref.");
+                    if (!Bill) throw new Error("Sales Bill ID is required for Against Ref.");
 
-                    const billEntry = await SalesBillModel.findById(salesBill).session(session);
+                    const billEntry = await SalesBillModel.findById(Bill).session(session);
                     if (!billEntry) throw new Error("Purchase Bill not found.");
 
                     if (billEntry.type === "BS") {
@@ -80,7 +80,7 @@ const ReceiptVoucherController = {
                         (b) => b.billName === bill.billName && b.billType === "New Ref." && b.amount === amount
                     );
                     if (billwiseEntry) {
-                        billwiseEntry.salesBill = newBill._id;
+                        billwiseEntry.Bill = newBill._id;
                     }
                 }
             }
@@ -175,10 +175,11 @@ const ReceiptVoucherController = {
             }
 
             for (const bill of existingVoucher.billwise) {
-                const { billType, amount, salesBill } = bill;
+                const { billType, amount, Bill } = bill;
 
                 if (billType === "Against Ref.") {
-                    const billEntry = await SalesBillModel.findById(salesBill).session(session);
+                    console.log(Bill);
+                    const billEntry = await SalesBillModel.findById(Bill).session(session);
                     if (!billEntry) throw new Error("Sales Bill not found.");
 
                     if (billEntry.type === "BS") {
@@ -189,7 +190,7 @@ const ReceiptVoucherController = {
                     await billEntry.save({ session });
                 } else if (billType === "New Ref.") {
                     // Delete new reference bills
-                    await SalesBillModel.findByIdAndDelete(salesBill).session(session);
+                    await SalesBillModel.findByIdAndDelete(Bill).session(session);
                 }
             }
 
@@ -214,19 +215,19 @@ const ReceiptVoucherController = {
             }
 
             for (const bill of updatedData.billwise) {
-                const { billType, amount, salesBill } = bill;
+                const { billType, amount, Bill } = bill;
                 const parsedAmount = parseFloat(amount);
 
                 if (billType === "Against Ref.") {
-                    const billEntry = await SalesBillModel.findById(salesBill).session(session);
+                    const billEntry = await SalesBillModel.findById(Bill).session(session);
                     if (!billEntry) throw new Error("Sales Bill not found.");
 
                     if (billEntry.type === "BS") {
                         billEntry.dueAmount = parseFloat(billEntry.dueAmount) - parseFloat(amount);
                     } else {
-                        console.log(salesBill.dueAmount);
+                        console.log(Bill.dueAmount);
                         billEntry.dueAmount = parseFloat(billEntry.dueAmount) + parseFloat(amount);
-                        console.log(salesBill.dueAmount);
+                        console.log(Bill.dueAmount);
                     }
                     await billEntry.save({ session });
                 } else if (billType === "New Ref.") {
@@ -248,7 +249,7 @@ const ReceiptVoucherController = {
                         (b) => b.billName === bill.billName && b.billType === "New Ref." && b.amount === amount
                     );
                     if (billwiseEntry) {
-                        billwiseEntry.salesBill = newBill._id;
+                        billwiseEntry.Bill = newBill._id;
                     }
                 }
             }
@@ -312,11 +313,11 @@ const ReceiptVoucherController = {
             }
 
             for (const bill of existingVoucher.billwise) {
-                const { billType, amount, salesBill } = bill;
+                const { billType, amount, Bill } = bill;
                 const parsedAmount = parseFloat(amount);
 
                 if (billType === "Against Ref.") {
-                    const billEntry = await SalesBillModel.findById(salesBill).session(session);
+                    const billEntry = await SalesBillModel.findById(Bill).session(session);
                     if (!billEntry) throw new Error("Sales Bill not found.");
 
                     if (billEntry.type === "BS") {
@@ -327,7 +328,7 @@ const ReceiptVoucherController = {
                     await billEntry.save({ session });
                 } else if (billType === "New Ref.") {
                     // Delete new reference bills
-                    await SalesBillModel.findByIdAndDelete(salesBill).session(session);
+                    await SalesBillModel.findByIdAndDelete(Bill).session(session);
                 }
             }
 
